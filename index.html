@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#050505" />
+    <meta name="description" content="XT RAcing 2026 — a cinematic browser motorcycle combat racer." />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Xt Racing 2026 — Pacific Run" />
+    <meta property="og:description" content="Race, fight, and split traffic in a cinematic first-person browser motorcycle combat racer." />
+    <meta property="og:image" content="https://road-rash-2026-pacific-run.nishant-chahar.chatgpt.site/og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="XT Racing 2026 — Pacific Run" />
+    <meta name="twitter:description" content="A cinematic first-person motorcycle combat racer, playable in your browser." />
+    <meta name="twitter:image" content="https://XT Racing-2026-pacific-run.nishant-chahar.chatgpt.site/og.png" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <title>XT Racing</title>
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="game-canvas" aria-label="XT Racing 2026 game world"></canvas>
+
+      <div class="screen-shade" aria-hidden="true"></div>
+      <div id="damage-flash" class="damage-flash" aria-hidden="true"></div>
+      <div id="speed-lines" class="speed-lines" aria-hidden="true"></div>
+
+      <section id="boot-screen" class="overlay boot-screen is-visible" aria-labelledby="game-title">
+        <div class="boot-topbar">
+          <div class="brand-mark"><span>XT</span><i></i></div>
+          <div class="boot-status"><span></span> 4.5 KM // 6 RIDERS</div>
+        </div>
+
+        <div class="boot-copy">
+          <p class="eyebrow">EA'S 1991 REBEL, REIMAGINED FOR THE BROWSER</p>
+          <h1 id="game-title"><span>ROAD</span><strong>RASH</strong><em>2026</em></h1>
+          <p class="lede">Combat the pack. Split the traffic. Own the coast.</p>
+
+          <div class="boot-actions">
+            <button id="start-button" class="primary-button">
+              <span>START THE RUN</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5l8 7-8 7V5z" /></svg>
+            </button>
+            <button id="how-button" class="ghost-button" aria-expanded="false" aria-controls="controls-panel">HOW TO RIDE</button>
+          </div>
+
+          <div id="controls-panel" class="controls-panel" aria-hidden="true">
+            <div><kbd>W</kbd><kbd>↑</kbd><span>THROTTLE</span></div>
+            <div><kbd>A</kbd><kbd>D</kbd><span>STEER</span></div>
+            <div><kbd>⇧</kbd><span>NITRO</span></div>
+            <div><kbd>SPACE</kbd><span>STRIKE</span></div>
+          </div>
+        </div>
+
+        <div class="boot-meta">
+          <span>4.5 KM</span>
+          <span>6 RIDERS</span>
+          <span>NO RULES</span>
+        </div>
+      </section>
+
+      <section id="hud" class="hud" aria-label="Race telemetry">
+        <div class="hud-position glass-panel">
+          <span class="hud-label">POSITION</span>
+          <div><strong id="position-value">6</strong><span>/ 7</span></div>
+        </div>
+
+        <div class="hud-progress">
+          <div class="progress-copy"><span>REDWOOD START</span><strong id="checkpoint-label">CHECKPOINT 1</strong><span>OCEAN GATE</span></div>
+          <div class="progress-track"><i id="progress-fill"></i><b style="left: 25%"></b><b style="left: 50%"></b><b style="left: 75%"></b></div>
+        </div>
+
+        <div class="hud-race glass-panel">
+          <div><span class="hud-label">TO FINISH</span><strong id="distance-value">4.5 KM</strong></div>
+          <div><span class="hud-label">RACE TIME</span><strong id="time-value">00:00.000</strong></div>
+        </div>
+
+        <div class="hud-vitals glass-panel">
+          <div class="vital-heading"><span>RIDER</span><strong id="health-value">100%</strong></div>
+          <div class="meter health-meter"><i id="health-fill"></i></div>
+          <div class="vital-heading nitro-heading"><span>NITRO</span><strong id="nitro-value">100%</strong></div>
+          <div class="meter nitro-meter"><i id="nitro-fill"></i></div>
+        </div>
+
+        <div class="speedometer" aria-live="polite">
+          <div id="rev-bars" class="rev-bars">
+            <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+          </div>
+          <div class="speed-readout"><strong id="speed-value">0</strong><span>KM/H</span></div>
+          <div class="gear-readout"><span>GEAR</span><strong id="gear-value">N</strong></div>
+        </div>
+
+        <div id="combat-prompt" class="combat-prompt glass-panel">
+          <kbd>SPACE</kbd>
+          <div><span>RIVAL IN RANGE</span><strong>STRIKE</strong></div>
+        </div>
+
+        <button id="pause-button" class="pause-button" aria-label="Pause game"><i></i><i></i></button>
+      </section>
+
+      <div id="countdown" class="countdown" aria-live="assertive"><span>3</span></div>
+
+      <section id="pause-screen" class="overlay pause-screen" aria-labelledby="pause-title">
+        <div class="modal-card glass-panel">
+          <p class="eyebrow">RUN SUSPENDED</p>
+          <h2 id="pause-title">PAUSED</h2>
+          <button id="resume-button" class="primary-button"><span>RESUME RACE</span></button>
+          <button id="restart-pause-button" class="ghost-button">RESTART RUN</button>
+          <p class="pause-hint">PRESS <kbd>P</kbd> OR <kbd>ESC</kbd> TO RESUME</p>
+        </div>
+      </section>
+
+      <section id="result-screen" class="overlay result-screen" aria-labelledby="result-title">
+        <div class="result-card">
+          <p id="result-eyebrow" class="eyebrow">PACIFIC RUN COMPLETE</p>
+          <h2 id="result-title">FINISH</h2>
+          <div class="result-stats">
+            <div><span>POSITION</span><strong id="result-position">1 / 7</strong></div>
+            <div><span>TIME</span><strong id="result-time">01:12.420</strong></div>
+            <div><span>TOP SPEED</span><strong id="result-speed">264 KM/H</strong></div>
+            <div><span>TAKEDOWNS</span><strong id="result-takedowns">2</strong></div>
+          </div>
+          <button id="restart-button" class="primary-button"><span>RIDE AGAIN</span></button>
+        </div>
+      </section>
+
+      <div id="touch-controls" class="touch-controls" aria-label="Touch controls">
+        <div class="touch-steer">
+          <button data-control="left" aria-label="Steer left">←</button>
+          <button data-control="right" aria-label="Steer right">→</button>
+        </div>
+        <div class="touch-actions">
+          <button data-control="attack" class="touch-attack">HIT</button>
+          <button data-control="boost" class="touch-boost">N₂O</button>
+          <button data-control="throttle" class="touch-throttle">GO</button>
+        </div>
+      </div>
+
+      <div id="webgl-error" class="webgl-error" role="alert">
+        <strong>3D RENDERING UNAVAILABLE</strong>
+        <span>This game needs WebGL 2. Try a current version of Chrome, Edge, Firefox, or Safari.</span>
+        <span data-webgl-reason class="webgl-reason"></span>
+        <ul class="webgl-tips">
+          <li>Enable hardware acceleration in your browser settings.</li>
+          <li>Update your graphics drivers, then restart the browser.</li>
+          <li>Open <code>chrome://gpu</code> (or <code>about:support</code> in Firefox) to check WebGL 2 status.</li>
+          <li>Run the game from a local server (<code>npm run dev</code>), not a <code>file://</code> path.</li>
+        </ul>
+      </div>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

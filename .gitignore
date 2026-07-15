@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.playwright-cli/
+.superdesign/
+output/
+tmp/
+.env.local
+.wrangler/
+.sora-venv/
+.DS_Store
+*.log
