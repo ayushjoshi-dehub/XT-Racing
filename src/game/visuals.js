@@ -437,11 +437,11 @@ export function createRoadTexture(renderer) {
   canvas.width = 1024; canvas.height = 2048;
   const ctx = canvas.getContext('2d');
 
-  // Base asphalt gradient
+  // Base asphalt gradient — visible mid-gray (not pitch black)
   const gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
-  gradient.addColorStop(0, '#0d0f11');
-  gradient.addColorStop(0.5, '#161819');
-  gradient.addColorStop(1, '#0c0e10');
+  gradient.addColorStop(0, '#383c42');
+  gradient.addColorStop(0.5, '#42464d');
+  gradient.addColorStop(1, '#363a40');
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -494,21 +494,21 @@ export function createRoadTexture(renderer) {
     ctx.stroke();
   }
 
-  ctx.globalAlpha = 0.88;
-  // Center yellow line
-  ctx.fillStyle = '#cc9e2b';
-  ctx.fillRect(503, 0, 5, 2048);
-  ctx.fillRect(514, 0, 5, 2048);
-  // Lane dashes
-  ctx.fillStyle = '#c1c6c8';
-  [255, 769].forEach((x) => {
-    for (let y = 0; y < 2048; y += 280) ctx.fillRect(x-3, y, 6, 154);
+  ctx.globalAlpha = 1.0;
+  // Center double yellow line — bright and crisp
+  ctx.fillStyle = '#e8c840';
+  ctx.fillRect(501, 0, 7, 2048);
+  ctx.fillRect(516, 0, 7, 2048);
+  // Lane dashes — bright white
+  ctx.fillStyle = '#e8ecef';
+  [252, 772].forEach((x) => {
+    for (let y = 0; y < 2048; y += 260) ctx.fillRect(x-4, y, 8, 160);
   });
-  // Edge solid lines
-  ctx.globalAlpha = 0.65;
-  ctx.fillStyle = '#d0d4d7';
-  ctx.fillRect(18, 0, 8, 2048);
-  ctx.fillRect(998, 0, 8, 2048);
+  // Edge solid lines — bright white
+  ctx.globalAlpha = 0.88;
+  ctx.fillStyle = '#f0f4f7';
+  ctx.fillRect(14, 0, 10, 2048);
+  ctx.fillRect(1000, 0, 10, 2048);
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
@@ -556,14 +556,24 @@ export function createBuilding(windowTexture, seed = 1, side = 1) {
   const width = 7 + random() * 14;
   const depth = 8 + random() * 12;
   const height = 14 + random() * 42;
-  const hue = random() > 0.55 ? 0x1c2327 : 0x2b2825;
   const glassTower = random() > 0.56;
   const hasBillboard = random() > 0.62;
   const group = new THREE.Group();
 
-  const baseMat = new THREE.MeshStandardMaterial({ color: hue, metalness: glassTower ? 0.6 : 0.1, roughness: glassTower ? 0.2 : 0.8 });
-  const concrete = new THREE.MeshStandardMaterial({ color: glassTower ? 0x1f272b : 0x4f4943, metalness: 0.05, roughness: 0.85 });
-  const darkTrim = new THREE.MeshStandardMaterial({ color: 0x090d0f, metalness: 0.7, roughness: 0.3 });
+  // Varied, daytime-visible building colors
+  const colorPalette = [
+    0x6a7a82, // slate
+    0x8a7d6a, // sandstone
+    0x5a6e76, // steel blue
+    0x7a6a5a, // warm tan
+    0x4a6070, // ocean gray
+    0x7a8a6a, // sage
+  ];
+  const hue = colorPalette[Math.floor(random() * colorPalette.length)];
+  const concreteColor = glassTower ? 0x526470 : 0x7a7468;
+  const baseMat = new THREE.MeshStandardMaterial({ color: hue, metalness: glassTower ? 0.55 : 0.08, roughness: glassTower ? 0.18 : 0.75 });
+  const concrete = new THREE.MeshStandardMaterial({ color: concreteColor, metalness: 0.05, roughness: 0.82 });
+  const darkTrim = new THREE.MeshStandardMaterial({ color: 0x1a2228, metalness: 0.7, roughness: 0.3 });
 
   const podiumHeight = 2.5 + random() * 2.3;
   const podium = makeMesh(new RoundedBoxGeometry(width*1.08, podiumHeight, depth*1.08, 4, 0.12), concrete, [0, podiumHeight/2, 0]);
@@ -574,7 +584,9 @@ export function createBuilding(windowTexture, seed = 1, side = 1) {
   windows.needsUpdate = true;
   windows.repeat.set(Math.max(1, Math.round(width/5.5)), Math.max(2, Math.round(height/7.5)));
   const windowMat = new THREE.MeshStandardMaterial({
-    map: windows, emissiveMap: windows, emissive: 0x172a36, emissiveIntensity: 0.6, metalness: 0.7, roughness: 0.1,
+    map: windows, emissiveMap: windows,
+    emissive: 0x3a6a8a, emissiveIntensity: 1.2,  // brighter windows visible in daylight
+    metalness: 0.65, roughness: 0.08,
   });
   const facadeHeight = height - podiumHeight - 0.6;
   const facadeY = podiumHeight + facadeHeight / 2;
@@ -672,12 +684,12 @@ export function createStreetLight(side = 1) {
 
 export function createSky() {
   const uniforms = {
-    topColor: { value: new THREE.Color(0x070e1a) },
-    middleColor: { value: new THREE.Color(0x9e3e2c) },
-    bottomColor: { value: new THREE.Color(0xd08540) },
-    sunColor: { value: new THREE.Color(0xffe194) },
-    sunDirection: { value: new THREE.Vector3(-0.42, 0.14, -0.9).normalize() },
-    horizonGlow: { value: new THREE.Color(0xff6622) },
+    topColor:     { value: new THREE.Color(0x0a3f7a) },   // deep azure
+    middleColor:  { value: new THREE.Color(0x3a8dc8) },   // sky blue
+    bottomColor:  { value: new THREE.Color(0xbde0f5) },   // pale horizon
+    sunColor:     { value: new THREE.Color(0xfff8d0) },   // warm white sun
+    sunDirection: { value: new THREE.Vector3(0.3, 0.88, -0.38).normalize() }, // high noon
+    horizonGlow:  { value: new THREE.Color(0x7ab8d8) },   // cool blue horizon
     time: { value: 0 },
   };
   const material = new THREE.ShaderMaterial({
@@ -704,33 +716,38 @@ export function createSky() {
       uniform float time;
 
       float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1,311.7))) * 43758.5453123); }
-      float hash3(vec3 p) { return fract(sin(dot(p, vec3(127.1,311.7,74.7))) * 43758.5453); }
 
       void main() {
-        float h = clamp(vWorld.y * 0.72 + 0.42, 0.0, 1.0);
-        vec3 sky = mix(bottomColor, middleColor, smoothstep(0.04, 0.38, h));
-        sky = mix(sky, topColor, smoothstep(0.38, 0.96, h));
+        float h = clamp(vWorld.y * 0.7 + 0.38, 0.0, 1.0);
 
-        // Horizon city glow
-        float horizonFactor = pow(1.0 - abs(vWorld.y), 5.0) * 0.38;
+        // Rayleigh-like sky gradient: pale at horizon, deep blue at zenith
+        vec3 sky = mix(bottomColor, middleColor, smoothstep(0.0, 0.35, h));
+        sky = mix(sky, topColor, smoothstep(0.3, 1.0, h));
+
+        // Soft horizon glow
+        float horizonFactor = pow(max(0.0, 1.0 - abs(vWorld.y) * 2.8), 3.0) * 0.28;
         sky += horizonGlow * horizonFactor;
 
-        // Sun disc
-        float sun = pow(max(dot(vWorld, sunDirection), 0.0), 620.0);
-        float halo = pow(max(dot(vWorld, sunDirection), 0.0), 16.0);
-        sky += sunColor * sun * 3.6 + vec3(1.0, 0.38, 0.12) * halo * 0.5;
+        // Atmospheric haze near ground
+        float haze = pow(max(0.0, 1.0 - vWorld.y * 4.0), 2.0) * 0.18;
+        sky = mix(sky, bottomColor * 1.15, haze);
 
-        // Stars in upper sky
-        if (vWorld.y > 0.15) {
-          vec3 starPos = floor(vWorld * 180.0);
-          float star = step(0.994, hash3(starPos));
-          float starBright = hash3(starPos + 0.5);
-          float twinkle = 0.7 + 0.3 * sin(time * 3.0 + starBright * 20.0);
-          sky += star * starBright * twinkle * 0.85 * smoothstep(0.15, 0.5, vWorld.y);
-        }
+        // Sun disc — sharp and bright
+        float sunDot = max(dot(vWorld, sunDirection), 0.0);
+        float sunDisc  = pow(sunDot, 2800.0);
+        float sunHalo  = pow(sunDot, 22.0);
+        float sunCoron = pow(sunDot, 6.0);
+        sky += sunColor * sunDisc  * 5.0;
+        sky += sunColor * sunHalo  * 0.35;
+        sky += vec3(0.9, 0.95, 1.0) * sunCoron * 0.08;
 
-        // Film grain
-        float grain = (hash(gl_FragCoord.xy * 0.5 + time) - 0.5) / 255.0;
+        // Subtle cloud-like variation using time
+        float cloud = sin(vWorld.x * 12.0 + time * 0.05) * sin(vWorld.z * 9.0 + time * 0.03);
+        cloud = smoothstep(0.55, 0.85, cloud * 0.5 + 0.5) * smoothstep(0.1, 0.6, vWorld.y) * 0.06;
+        sky += vec3(cloud);
+
+        // Subtle film grain
+        float grain = (hash(gl_FragCoord.xy * 0.5 + time) - 0.5) / 280.0;
         gl_FragColor = vec4(sky + grain, 1.0);
       }
     `,

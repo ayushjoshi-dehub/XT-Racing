@@ -155,6 +155,7 @@ export class RoadRashGame {
     return {
       boot: byId('boot-screen'),
       start: byId('start-button'),
+      multiBtn: byId('multi-button'),
       how: byId('how-button'),
       controls: byId('controls-panel'),
       hud: byId('hud'),
@@ -164,6 +165,12 @@ export class RoadRashGame {
       resume: byId('resume-button'),
       pauseButton: byId('pause-button'),
       restartPause: byId('restart-pause-button'),
+      menuBtn: byId('menu-button'),
+      settingsBtn: byId('settings-pause-button'),
+      settingsScreen: byId('settings-screen'),
+      settingsClose: byId('settings-close'),
+      multiScreen: byId('multi-screen'),
+      multiClose: byId('multi-close'),
       restart: byId('restart-button'),
       speed: byId('speed-value'),
       gear: byId('gear-value'),
@@ -219,13 +226,13 @@ export class RoadRashGame {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.8));
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.4;
+    this.renderer.toneMappingExposure = 1.2;
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x14243b);
-    this.scene.fog = new THREE.FogExp2(0x43505a, 0.0074);
+    this.scene.background = new THREE.Color(0x87ceeb); // bright daylight sky
+    this.scene.fog = new THREE.FogExp2(0x9ac8e0, 0.0014); // lighter blue fog
 
     this.camera = new THREE.PerspectiveCamera(72, window.innerWidth / window.innerHeight, 0.06, 720);
     this.camera.position.set(0, 2.48, PLAYER_Z - 0.42);
@@ -235,10 +242,10 @@ export class RoadRashGame {
     this.composer = new EffectComposer(this.renderer);
     this.composer.addPass(new RenderPass(this.scene, this.camera));
 
-    const bloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.38, 0.68, 0.80);
-    bloom.threshold = 0.72;
-    bloom.strength = 0.38;
-    bloom.radius = 0.64;
+    const bloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.28, 0.55, 0.85);
+    bloom.threshold = 0.80;
+    bloom.strength = 0.28;
+    bloom.radius = 0.55;
     this.composer.addPass(bloom);
 
     // Radial blur + chromatic aberration pass
@@ -253,26 +260,32 @@ export class RoadRashGame {
     this.scene.add(sky);
     this.scene.add(createMountains());
 
-    const hemisphere = new THREE.HemisphereLight(0xa9cbea, 0x412a21, 2.4);
+    // ─── Bright daylight lighting ────────────────────────────────────────────
+    const hemisphere = new THREE.HemisphereLight(0x87ceeb, 0x6b8c4a, 3.0); // sky blue / green ground
     this.scene.add(hemisphere);
 
-    const sun = new THREE.DirectionalLight(0xffd39a, 5.8);
-    sun.position.set(-72, 86, -126);
+    const sun = new THREE.DirectionalLight(0xfff8e0, 9.5); // warm white sun
+    sun.position.set(60, 120, -80); // high-noon position
     sun.castShadow = true;
     sun.shadow.mapSize.set(2048, 2048);
-    sun.shadow.camera.left = -58; sun.shadow.camera.right = 58;
-    sun.shadow.camera.top = 48; sun.shadow.camera.bottom = -20;
-    sun.shadow.camera.near = 20; sun.shadow.camera.far = 260;
+    sun.shadow.camera.left = -60; sun.shadow.camera.right = 60;
+    sun.shadow.camera.top = 50; sun.shadow.camera.bottom = -22;
+    sun.shadow.camera.near = 20; sun.shadow.camera.far = 280;
     sun.shadow.bias = -0.00012;
     this.scene.add(sun);
 
-    const rim = new THREE.DirectionalLight(0x4ebcff, 2.2);
+    const fillLight = new THREE.DirectionalLight(0xd0e8ff, 2.8); // soft blue fill from sky
+    fillLight.position.set(-40, 30, 40);
+    this.scene.add(fillLight);
+
+    const rim = new THREE.DirectionalLight(0xffeedd, 1.6); // warm rim
     rim.position.set(35, 22, 18);
     this.scene.add(rim);
 
+    // Grass ground — visible green
     const ground = new THREE.Mesh(
       new THREE.PlaneGeometry(1100, 2200),
-      new THREE.MeshStandardMaterial({ color: 0x1c2927, roughness: 0.98 }),
+      new THREE.MeshStandardMaterial({ color: 0x4a6b3a, roughness: 0.95 }),
     );
     ground.rotation.x = -Math.PI / 2;
     ground.position.set(0, -0.54, -780);
@@ -281,7 +294,7 @@ export class RoadRashGame {
 
     const ocean = new THREE.Mesh(
       new THREE.PlaneGeometry(620, 1500, 4, 12),
-      new THREE.MeshPhysicalMaterial({ color: 0x183c50, metalness: 0.48, roughness: 0.22, clearcoat: 0.85, transparent: true, opacity: 0.88 }),
+      new THREE.MeshPhysicalMaterial({ color: 0x1a72a8, metalness: 0.35, roughness: 0.18, clearcoat: 0.9, transparent: true, opacity: 0.9 }),
     );
     ocean.rotation.x = -Math.PI / 2;
     ocean.position.set(305, -0.34, -650);
@@ -289,14 +302,15 @@ export class RoadRashGame {
 
     this.windowTexture = createWindowTexture();
     const roadTexture = createRoadTexture(this.renderer);
+    // Road material tuned for daytime: less metallic, more matte
     this.roadMaterial = new THREE.MeshPhysicalMaterial({
       map: roadTexture,
       color: 0xffffff,
-      metalness: 0.28,
-      roughness: 0.38,
-      clearcoat: 0.78,
-      clearcoatRoughness: 0.18,
-      envMapIntensity: 0.85,
+      metalness: 0.08,
+      roughness: 0.68,
+      clearcoat: 0.30,
+      clearcoatRoughness: 0.50,
+      envMapIntensity: 0.35,
     });
 
     for (let i = 0; i < SEGMENT_COUNT; i++) {
@@ -311,6 +325,8 @@ export class RoadRashGame {
     this.scene.add(this.sparkSystem.points);
     this.smokeSystem = this.createSmokeSystem();
     this.scene.add(this.smokeSystem.points);
+    this.boostSystem = this.createBoostSystem();
+    this.scene.add(this.boostSystem.points);
   }
 
   createRoadSegment(index) {
@@ -403,11 +419,16 @@ export class RoadRashGame {
       const car = createCar(CAR_COLORS[index % CAR_COLORS.length]);
       car.scale.setScalar(0.92 + (index % 3) * 0.04);
       this.scene.add(car);
+      const baseLane = LANES[(index * 3 + 1) % LANES.length];
+      const baseSpd = 20 + (index % 5) * 2.6;
       return {
         car,
-        lane: LANES[(index * 3 + 1) % LANES.length],
+        lane: baseLane,
+        targetLane: baseLane,
         distance: 82 + index * 105 + (index % 4) * 18,
-        speed: 20 + (index % 5) * 2.6,
+        speed: baseSpd,
+        baseSpeed: baseSpd,
+        laneChangeTimer: 2 + Math.random() * 5,
         hit: false,
       };
     });
@@ -438,6 +459,35 @@ export class RoadRashGame {
     this.dom.resume.addEventListener('click', () => this.resumeGame());
     this.dom.restartPause.addEventListener('click', () => this.beginRace());
     this.dom.restart.addEventListener('click', () => this.beginRace());
+    this.dom.menuBtn?.addEventListener('click', () => this.returnToMenu());
+    this.dom.settingsBtn?.addEventListener('click', () => this.openSettings());
+    this.dom.settingsClose?.addEventListener('click', () => this.closeSettings());
+    this.dom.multiBtn?.addEventListener('click', () => this.openMultiplayer());
+    this.dom.multiClose?.addEventListener('click', () => this.closeMultiplayer());
+    // Multiplayer tab switching
+    document.querySelectorAll('.multi-tab-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.multi-tab-btn').forEach((b) => b.classList.remove('is-active'));
+        btn.classList.add('is-active');
+      });
+    });
+    // Settings: audio sliders
+    document.querySelectorAll('.settings-slider').forEach((slider) => {
+      slider.addEventListener('input', (e) => {
+        const key = e.target.dataset.setting;
+        const val = parseFloat(e.target.value);
+        if (key === 'master' && this.audio.master) this.audio.master.gain.value = val * 0.58;
+        localStorage.setItem(`xt-setting-${key}`, val);
+      });
+    });
+    // Settings: graphics quality
+    document.querySelectorAll('.quality-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.quality-btn').forEach((b) => b.classList.remove('is-active'));
+        btn.classList.add('is-active');
+        localStorage.setItem('xt-quality', btn.dataset.quality);
+      });
+    });
 
     document.querySelectorAll('[data-control]').forEach((button) => {
       const control = button.dataset.control;
@@ -547,7 +597,9 @@ export class RoadRashGame {
     this.traffic.forEach((traffic, index) => {
       traffic.distance = 82 + index * 105 + (index % 4) * 18;
       traffic.lane = LANES[(index * 3 + 1) % LANES.length];
+      traffic.targetLane = traffic.lane;
       traffic.hit = false;
+      traffic.laneChangeTimer = 2 + Math.random() * 5;
       traffic.car.visible = true;
     });
     // Hide UI notifications
@@ -594,6 +646,7 @@ export class RoadRashGame {
     this.updateCamera(dt);
     this.updateSparks(dt);
     this.updateSmoke(dt);
+    this.updateBoostParticles(dt);
     if (this.skyMaterial) {
       this.skyTime += dt;
       this.skyMaterial.uniforms.time.value = this.skyTime;
@@ -720,6 +773,14 @@ export class RoadRashGame {
     this.updateHud();
     this.audio.update(this.speed, throttle ? 1 : 0, this.boosting, false);
 
+    // Boost exhaust particle trail
+    if (this.boosting) {
+      const exhaustPos = this.player.position.clone().add(new THREE.Vector3(
+        (Math.random() - 0.5) * 0.35, 0.68, 1.55
+      ));
+      this.spawnBoostParticles(exhaustPos, 3);
+    }
+
     // Radial blur scales with speed & boost
     const speedFactor = clamp(this.speed / BOOST_SPEED, 0, 1);
     const blurStr = speedFactor * speedFactor * (this.boosting ? 0.045 : 0.022);
@@ -828,9 +889,41 @@ export class RoadRashGame {
   updateTraffic(dt) {
     this.traffic.forEach((traffic, index) => {
       traffic.distance += traffic.speed * dt;
+
+      // ── Lane changing AI ────────────────────────────────────────────────
+      traffic.laneChangeTimer = (traffic.laneChangeTimer || 0) - dt;
+      if (traffic.laneChangeTimer <= 0) {
+        // Pick a random new lane, but avoid the player's lane when very close
+        const available = LANES.filter((l) => {
+          const dz = traffic.distance - this.distance;
+          if (Math.abs(dz) < 12) return Math.abs(l - this.playerLane) > 1.5;
+          return true;
+        });
+        if (available.length > 0) {
+          traffic.targetLane = available[Math.floor(Math.random() * available.length)];
+        }
+        traffic.laneChangeTimer = 3.5 + Math.random() * 5.5;
+      }
+      // Smooth lane interpolation
+      if (traffic.targetLane !== undefined) {
+        traffic.lane = lerp(traffic.lane, traffic.targetLane, 1.4, dt);
+      }
+
+      // ── Emergency braking when player is very close ahead ────────────────
+      const dz = this.distance - traffic.distance;
+      const dx = Math.abs(traffic.lane - this.playerLane);
+      if (dz > 0 && dz < 10 && dx < 1.8) {
+        traffic.speed = Math.max(6, traffic.speed - 70 * dt);
+      } else {
+        const base = traffic.baseSpeed || (20 + (index % 5) * 2.6);
+        traffic.speed = lerp(traffic.speed, base, 1.8, dt);
+      }
+
       if (traffic.distance < this.distance - 75) {
         traffic.distance = this.distance + 760 + index * 82 + Math.random() * 160;
-        traffic.lane = LANES[(index + Math.floor(this.distance / 300)) % LANES.length];
+        const newLane = LANES[(index + Math.floor(this.distance / 300)) % LANES.length];
+        traffic.lane = newLane;
+        traffic.targetLane = newLane;
         traffic.hit = false;
       }
     });
@@ -1307,5 +1400,135 @@ export class RoadRashGame {
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(window.innerWidth, window.innerHeight, false);
     this.composer.setSize(window.innerWidth, window.innerHeight);
+  }
+
+  // ─── Return to Main Menu ─────────────────────────────────────────────────
+  returnToMenu() {
+    this.state = 'menu';
+    this.player.visible = false;
+    this.dom.hud.classList.remove('is-visible');
+    this.dom.touchControls.classList.remove('is-visible');
+    this.dom.pause.classList.remove('is-visible');
+    this.dom.result.classList.remove('is-visible');
+    this.dom.settingsScreen?.classList.remove('is-visible');
+    this.dom.boot.classList.add('is-visible');
+    this.audio.context?.suspend();
+    this.keys.clear();
+    // Reset to demo state
+    this.distance = 0;
+    this.speed = 92;
+    this.health = 100;
+    this.nitro = 100;
+    this.boosting = false;
+    this.roadSegments.forEach((segment, index) => {
+      segment.userData.worldDistance = (index - 1) * SEGMENT_LENGTH;
+      segment.visible = true;
+    });
+    this.rivals.forEach((rival, index) => {
+      const config = RIVAL_CONFIG[index];
+      rival.distance = config.distance;
+      rival.lane = config.lane;
+      rival.targetLane = config.lane;
+      rival.health = 100;
+      rival.takedown = false;
+      rival.bike.visible = true;
+      rival.bike.rotation.set(0, 0, 0);
+    });
+    this.traffic.forEach((traffic, index) => {
+      traffic.distance = 82 + index * 105 + (index % 4) * 18;
+      traffic.lane = LANES[(index * 3 + 1) % LANES.length];
+      traffic.targetLane = traffic.lane;
+      traffic.hit = false;
+      traffic.car.visible = true;
+    });
+  }
+
+  // ─── Settings overlay ────────────────────────────────────────────────────
+  openSettings() {
+    this.dom.settingsScreen?.classList.add('is-visible');
+  }
+
+  closeSettings() {
+    this.dom.settingsScreen?.classList.remove('is-visible');
+  }
+
+  // ─── Multiplayer overlay ─────────────────────────────────────────────────
+  openMultiplayer() {
+    this.dom.multiScreen?.classList.add('is-visible');
+  }
+
+  closeMultiplayer() {
+    this.dom.multiScreen?.classList.remove('is-visible');
+  }
+
+  // ─── Boost particle system ───────────────────────────────────────────────
+  createBoostSystem() {
+    const count = 150;
+    const geometry = new THREE.BufferGeometry();
+    const positions = new Float32Array(count * 3);
+    const velocities = new Float32Array(count * 3);
+    const lifespans = new Float32Array(count);
+    const colors = new Float32Array(count * 3);
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    const material = new THREE.PointsMaterial({
+      size: 0.18, transparent: true, blending: THREE.AdditiveBlending,
+      depthWrite: false, vertexColors: true,
+    });
+    const points = new THREE.Points(geometry, material);
+    return { points, velocities, lifespans, count };
+  }
+
+  spawnBoostParticles(origin, quantity) {
+    if (!this.boostSystem) return;
+    const positions = this.boostSystem.points.geometry.attributes.position.array;
+    const colors = this.boostSystem.points.geometry.attributes.color.array;
+    const vels = this.boostSystem.velocities;
+    const lives = this.boostSystem.lifespans;
+    let spawned = 0;
+    for (let i = 0; i < this.boostSystem.count; i++) {
+      if (lives[i] <= 0) {
+        lives[i] = 0.18 + Math.random() * 0.22;
+        positions[i*3]   = origin.x; positions[i*3+1] = origin.y; positions[i*3+2] = origin.z;
+        vels[i*3]   = (Math.random() - 0.5) * 2.5;
+        vels[i*3+1] = Math.random() * 1.8 + 0.5;
+        vels[i*3+2] = 4 + Math.random() * 8;  // shoot backward
+        // Cyan/blue boost color
+        const t = Math.random();
+        colors[i*3] = 0.1 + t * 0.3; colors[i*3+1] = 0.7 + t * 0.3; colors[i*3+2] = 1.0;
+        spawned++;
+        if (spawned >= quantity) break;
+      }
+    }
+    this.boostSystem.points.geometry.attributes.position.needsUpdate = true;
+    this.boostSystem.points.geometry.attributes.color.needsUpdate = true;
+  }
+
+  updateBoostParticles(dt) {
+    if (!this.boostSystem) return;
+    const positions = this.boostSystem.points.geometry.attributes.position.array;
+    const colors = this.boostSystem.points.geometry.attributes.color.array;
+    const vels = this.boostSystem.velocities;
+    const lives = this.boostSystem.lifespans;
+    let needsUpdate = false;
+    for (let i = 0; i < this.boostSystem.count; i++) {
+      if (lives[i] > 0) {
+        lives[i] -= dt;
+        positions[i*3]   += vels[i*3]   * dt;
+        positions[i*3+1] += vels[i*3+1] * dt;
+        positions[i*3+2] += vels[i*3+2] * dt;
+        vels[i*3+1] -= 4 * dt;
+        // Fade out cyan -> transparent
+        const fade = Math.max(0, lives[i] / 0.4);
+        colors[i*3+1] *= 0.98; // desaturate slightly
+        needsUpdate = true;
+      } else {
+        positions[i*3] = 9999;
+      }
+    }
+    if (needsUpdate) {
+      this.boostSystem.points.geometry.attributes.position.needsUpdate = true;
+      this.boostSystem.points.geometry.attributes.color.needsUpdate = true;
+    }
   }
 }

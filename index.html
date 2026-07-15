@@ -4,19 +4,18 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#050505" />
-    <meta name="description" content="XT RAcing 2026 — a cinematic browser motorcycle combat racer." />
+    <meta name="description" content="XT Racing 2026 — a cinematic browser motorcycle combat racer." />
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="Xt Racing 2026 — Pacific Run" />
+    <meta property="og:title" content="XT Racing 2026 — Pacific Run" />
     <meta property="og:description" content="Race, fight, and split traffic in a cinematic first-person browser motorcycle combat racer." />
-    <meta property="og:image" content="https://road-rash-2026-pacific-run.nishant-chahar.chatgpt.site/og.png" />
-    <meta property="og:image:width" content="1200" />
-    <meta property="og:image:height" content="630" />
+    <meta property="og:image" content="/og.png" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="XT Racing 2026 — Pacific Run" />
-    <meta name="twitter:description" content="A cinematic first-person motorcycle combat racer, playable in your browser." />
-    <meta name="twitter:image" content="https://XT Racing-2026-pacific-run.nishant-chahar.chatgpt.site/og.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,400;0,700;0,800;0,900;1,700;1,900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <title>XT Racing</title>
+    <title>XT Racing 2026</title>
   </head>
   <body>
     <div id="app">
@@ -26,6 +25,7 @@
       <div id="damage-flash" class="damage-flash" aria-hidden="true"></div>
       <div id="speed-lines" class="speed-lines" aria-hidden="true"></div>
 
+      <!-- ─── Landing / Boot Screen ──────────────────────────────────────────── -->
       <section id="boot-screen" class="overlay boot-screen is-visible" aria-labelledby="game-title">
         <div class="boot-topbar">
           <div class="brand-mark"><span>XT</span><i></i></div>
@@ -34,7 +34,7 @@
 
         <div class="boot-copy">
           <p class="eyebrow">EA'S 1991 REBEL, REIMAGINED FOR THE BROWSER</p>
-          <h1 id="game-title"><span>ROAD</span><strong>RASH</strong><em>2026</em></h1>
+          <h1 id="game-title"><span>XT</span><strong>RACING</strong><em>2026</em></h1>
           <p class="lede">Combat the pack. Split the traffic. Own the coast.</p>
 
           <div class="boot-actions">
@@ -42,7 +42,15 @@
               <span>START THE RUN</span>
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5l8 7-8 7V5z" /></svg>
             </button>
-            <button id="how-button" class="ghost-button" aria-expanded="false" aria-controls="controls-panel">HOW TO RIDE</button>
+            <button id="multi-button" class="multi-button">
+              <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 014-4h4"/><circle cx="17" cy="11" r="3"/><path d="M14 20v-1a3 3 0 016 0v1"/></svg>
+              <span>MULTIPLAYER</span>
+            </button>
+          </div>
+
+          <div class="boot-secondary-actions">
+            <button class="text-button" id="how-button" aria-expanded="false" aria-controls="controls-panel">HOW TO RIDE</button>
+            <button class="text-button" id="settings-boot-button">SETTINGS</button>
           </div>
 
           <div id="controls-panel" class="controls-panel" aria-hidden="true">
@@ -60,6 +68,7 @@
         </div>
       </section>
 
+      <!-- ─── HUD ────────────────────────────────────────────────────────────── -->
       <section id="hud" class="hud" aria-label="Race telemetry">
         <div class="hud-position glass-panel">
           <span class="hud-label">POSITION</span>
@@ -81,6 +90,7 @@
           <div class="meter health-meter"><i id="health-fill"></i></div>
           <div class="vital-heading nitro-heading"><span>NITRO</span><strong id="nitro-value">100%</strong></div>
           <div class="meter nitro-meter"><i id="nitro-fill"></i></div>
+          <div id="nitro-shimmer" class="nitro-shimmer" aria-hidden="true"></div>
         </div>
 
         <div class="speedometer" aria-live="polite">
@@ -96,21 +106,43 @@
           <div><span>RIVAL IN RANGE</span><strong>STRIKE</strong></div>
         </div>
 
+        <!-- Rival HP bar -->
+        <div id="rival-hp-bar" class="rival-hp-bar glass-panel">
+          <span class="hud-label">RIVAL</span>
+          <div class="rival-hp-track"><i id="rival-hp-fill"></i></div>
+        </div>
+
+        <!-- Notifications -->
+        <div id="takedown-banner" class="takedown-banner" aria-live="assertive">TAKEDOWN!</div>
+        <div id="near-miss" class="near-miss" aria-live="polite">NEAR MISS!</div>
+        <div id="checkpoint-notify" class="checkpoint-notify" aria-live="polite">CHECKPOINT 1</div>
+
         <button id="pause-button" class="pause-button" aria-label="Pause game"><i></i><i></i></button>
       </section>
 
       <div id="countdown" class="countdown" aria-live="assertive"><span>3</span></div>
 
+      <!-- ─── Pause Screen ───────────────────────────────────────────────────── -->
       <section id="pause-screen" class="overlay pause-screen" aria-labelledby="pause-title">
         <div class="modal-card glass-panel">
           <p class="eyebrow">RUN SUSPENDED</p>
           <h2 id="pause-title">PAUSED</h2>
           <button id="resume-button" class="primary-button"><span>RESUME RACE</span></button>
           <button id="restart-pause-button" class="ghost-button">RESTART RUN</button>
+          <button id="settings-pause-button" class="ghost-button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><circle cx="12" cy="12" r="3"/><path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72 1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+            SETTINGS
+          </button>
+          <div class="pause-divider"></div>
+          <button id="menu-button" class="ghost-button danger-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            RETURN TO MENU
+          </button>
           <p class="pause-hint">PRESS <kbd>P</kbd> OR <kbd>ESC</kbd> TO RESUME</p>
         </div>
       </section>
 
+      <!-- ─── Result Screen ──────────────────────────────────────────────────── -->
       <section id="result-screen" class="overlay result-screen" aria-labelledby="result-title">
         <div class="result-card">
           <p id="result-eyebrow" class="eyebrow">PACIFIC RUN COMPLETE</p>
@@ -121,10 +153,134 @@
             <div><span>TOP SPEED</span><strong id="result-speed">264 KM/H</strong></div>
             <div><span>TAKEDOWNS</span><strong id="result-takedowns">2</strong></div>
           </div>
-          <button id="restart-button" class="primary-button"><span>RIDE AGAIN</span></button>
+          <div class="result-actions">
+            <button id="restart-button" class="primary-button"><span>RIDE AGAIN</span></button>
+            <button id="result-menu-button" class="ghost-button">MAIN MENU</button>
+          </div>
         </div>
       </section>
 
+      <!-- ─── Settings Overlay ──────────────────────────────────────────────── -->
+      <section id="settings-screen" class="overlay settings-screen" aria-labelledby="settings-title">
+        <div class="settings-card glass-panel">
+          <div class="overlay-header">
+            <div>
+              <p class="eyebrow">CONFIGURATION</p>
+              <h2 id="settings-title">SETTINGS</h2>
+            </div>
+            <button id="settings-close" class="close-btn" aria-label="Close settings">✕</button>
+          </div>
+
+          <div class="settings-body">
+            <!-- Audio -->
+            <div class="settings-section">
+              <h3 class="settings-section-title">AUDIO</h3>
+              <div class="slider-row">
+                <label for="s-master">MASTER</label>
+                <input id="s-master" type="range" min="0" max="1" step="0.01" value="1" class="settings-slider" data-setting="master" />
+                <span class="slider-val">100</span>
+              </div>
+              <div class="slider-row">
+                <label for="s-engine">ENGINE</label>
+                <input id="s-engine" type="range" min="0" max="1" step="0.01" value="0.85" class="settings-slider" data-setting="engine" />
+                <span class="slider-val">85</span>
+              </div>
+              <div class="slider-row">
+                <label for="s-effects">EFFECTS</label>
+                <input id="s-effects" type="range" min="0" max="1" step="0.01" value="1" class="settings-slider" data-setting="effects" />
+                <span class="slider-val">100</span>
+              </div>
+            </div>
+
+            <!-- Graphics -->
+            <div class="settings-section">
+              <h3 class="settings-section-title">GRAPHICS</h3>
+              <div class="quality-grid">
+                <button class="quality-btn" data-quality="low">LOW</button>
+                <button class="quality-btn" data-quality="medium">MEDIUM</button>
+                <button class="quality-btn is-active" data-quality="high">HIGH</button>
+                <button class="quality-btn" data-quality="ultra">ULTRA</button>
+              </div>
+            </div>
+
+            <!-- Controls -->
+            <div class="settings-section">
+              <h3 class="settings-section-title">CONTROLS</h3>
+              <div class="controls-grid">
+                <div><kbd>W</kbd><kbd>↑</kbd> <span>Throttle</span></div>
+                <div><kbd>S</kbd><kbd>↓</kbd> <span>Brake</span></div>
+                <div><kbd>A</kbd><kbd>←</kbd> <span>Steer Left</span></div>
+                <div><kbd>D</kbd><kbd>→</kbd> <span>Steer Right</span></div>
+                <div><kbd>⇧</kbd> <span>Nitro Boost</span></div>
+                <div><kbd>SPACE</kbd> <span>Strike Rival</span></div>
+                <div><kbd>P</kbd><kbd>ESC</kbd> <span>Pause</span></div>
+                <div><kbd>ENTER</kbd> <span>Start Race</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ─── Multiplayer Overlay ───────────────────────────────────────────── -->
+      <section id="multi-screen" class="overlay multi-screen" aria-labelledby="multi-title">
+        <div class="multi-card glass-panel">
+          <div class="overlay-header">
+            <div>
+              <p class="eyebrow">ONLINE RACING</p>
+              <h2 id="multi-title">MULTIPLAYER</h2>
+            </div>
+            <button id="multi-close" class="close-btn" aria-label="Close multiplayer">✕</button>
+          </div>
+
+          <div class="multi-tabs">
+            <button class="multi-tab-btn is-active">QUICK MATCH</button>
+            <button class="multi-tab-btn">HOST GAME</button>
+            <button class="multi-tab-btn">JOIN GAME</button>
+            <button class="multi-tab-btn">PRIVATE</button>
+          </div>
+
+          <div class="multi-body">
+            <div class="coming-soon-panel">
+              <div class="coming-soon-icon">
+                <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2" width="48" height="48">
+                  <circle cx="24" cy="24" r="20"/>
+                  <path d="M24 14v10l6 6"/>
+                </svg>
+              </div>
+              <p class="coming-soon-label">COMING SOON</p>
+              <p class="coming-soon-sub">Multiplayer infrastructure is ready.<br/>Connect via Socket.IO, WebRTC, or Colyseus.</p>
+            </div>
+
+            <div class="lobby-preview">
+              <div class="lobby-header">
+                <span class="hud-label">LOBBY PREVIEW</span>
+                <span class="ping-badge">PING: —</span>
+              </div>
+              <div class="player-list">
+                <div class="player-slot filled">
+                  <div class="player-dot host"></div>
+                  <span class="player-name">YOU (HOST)</span>
+                  <span class="player-ping">— ms</span>
+                  <span class="ready-badge not-ready">WAITING</span>
+                </div>
+                <div class="player-slot empty"><span>Empty Slot</span></div>
+                <div class="player-slot empty"><span>Empty Slot</span></div>
+                <div class="player-slot empty"><span>Empty Slot</span></div>
+                <div class="player-slot empty"><span>Empty Slot</span></div>
+                <div class="player-slot empty"><span>Empty Slot</span></div>
+              </div>
+              <div class="lobby-actions">
+                <button class="primary-button" disabled>
+                  <span>READY UP</span>
+                </button>
+                <button class="ghost-button" disabled>INVITE CODE</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ─── Touch Controls ────────────────────────────────────────────────── -->
       <div id="touch-controls" class="touch-controls" aria-label="Touch controls">
         <div class="touch-steer">
           <button data-control="left" aria-label="Steer left">←</button>
@@ -137,6 +293,7 @@
         </div>
       </div>
 
+      <!-- ─── WebGL Error ────────────────────────────────────────────────────── -->
       <div id="webgl-error" class="webgl-error" role="alert">
         <strong>3D RENDERING UNAVAILABLE</strong>
         <span>This game needs WebGL 2. Try a current version of Chrome, Edge, Firefox, or Safari.</span>
@@ -150,5 +307,21 @@
       </div>
     </div>
     <script type="module" src="/src/main.js"></script>
+    <script>
+      // Settings boot button also opens settings (wired after game init via global)
+      document.getElementById('settings-boot-button')?.addEventListener('click', () => {
+        document.getElementById('settings-screen')?.classList.add('is-visible');
+      });
+      document.getElementById('result-menu-button')?.addEventListener('click', () => {
+        window.roadRashGame?.returnToMenu();
+      });
+      // Live slider value display
+      document.querySelectorAll('.settings-slider').forEach((s) => {
+        const display = s.parentElement.querySelector('.slider-val');
+        if (display) {
+          s.addEventListener('input', () => { display.textContent = Math.round(s.value * 100); });
+        }
+      });
+    </script>
   </body>
 </html>
