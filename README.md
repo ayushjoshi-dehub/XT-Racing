@@ -1,11 +1,11 @@
-# Road Rash 2026 — Pacific Run
+    # Xt Racing 2026 — Pacific Run
 
-A cinematic first-person motorcycle combat racer, playable directly in your browser. Built as a modern reimagining of EA's 1991 classic *Road Rash* using Three.js and Vite.
+A cinematic first-person motorcycle combat racer, playable directly in your browser. Built as a modern reimagining of EA's 1991 classic *Xt Racing* using Three.js and Vite.
 
 
 ## 🏍️ What is this?
 
-Road Rash 2026 puts you in the saddle of a high-performance bike on a winding Pacific coastal road. Race against 6 rivals, split through traffic, and fight your way to the front — no rules, no mercy, just the run.
+Xt Racing 2026 puts you in the saddle of a high-performance bike on a winding Pacific coastal road. Race against 6 rivals, split through traffic, and fight your way to the front — no rules, no mercy, just the run.
 
 ## ✨ Features
 
@@ -108,4 +108,4 @@ MIT
 
 ---
 
-*Built as a passion project. Not affiliated with EA or the original Road Rash.*
+*Built as a passion project. Not affiliated with EA or the original Xt Racing.*
