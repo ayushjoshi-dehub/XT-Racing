@@ -1,7 +1,10 @@
-    # Xt Racing 2026 — Pacific Run
 
+# Xt-Racing 
 A cinematic first-person motorcycle combat racer, playable directly in your browser. Built as a modern reimagining of EA's 1991 classic *Xt Racing* using Three.js and Vite.
 
+<p align="center">
+  <img src="./public/image.png" alt="XT Racing Logo" width="1000">
+</p>
 
 ## 🏍️ What is this?
 
