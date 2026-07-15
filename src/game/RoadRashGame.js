@@ -16,6 +16,7 @@ import {
   createBuilding,
   createWindowTexture,
   createRoadTexture,
+  preloadBikeModel,
   mulberry32,
 } from './visuals.js';
 import {
@@ -138,6 +139,8 @@ export class RoadRashGame {
     this.roadSegments = [];
     this.mist = null;
     this.sparkSystem = null;
+    this.bikeModel = null;
+    this.bikeModelPath = '/assets/bike.glb';
     this.windowTexture = null;
     this.roadMaterial = null;
     this.radialBlurPass = null;
@@ -193,7 +196,8 @@ export class RoadRashGame {
     };
   }
 
-  init() {
+  async init() {
+    this.bikeModel = await preloadBikeModel(this.bikeModelPath);
     this.setupRenderer();
     this.setupWorld();
     this.setupRacers();
@@ -215,7 +219,7 @@ export class RoadRashGame {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.8));
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.12;
+    this.renderer.toneMappingExposure = 1.4;
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
@@ -366,7 +370,7 @@ export class RoadRashGame {
   }
 
   setupRacers() {
-    this.player = createBike({ color: 0xc7ff32, suitColor: 0x13181b, accent: 0x27d9ff, player: true });
+    this.player = createBike({ color: 0xc7ff32, suitColor: 0x13181b, accent: 0x27d9ff, player: true, glbModel: this.bikeModel });
     this.player.position.set(0, 0.03, PLAYER_Z);
     this.player.visible = false;
     this.scene.add(this.player);
@@ -375,7 +379,7 @@ export class RoadRashGame {
     this.camera.add(this.cockpit);
 
     this.rivals = RIVAL_CONFIG.map((config, index) => {
-      const bike = createBike({ color: config.color, suitColor: 0x151719, accent: config.accent });
+      const bike = createBike({ color: config.color, suitColor: 0x151719, accent: config.accent, glbModel: this.bikeModel });
       bike.scale.multiplyScalar(0.96);
       this.scene.add(bike);
       return {

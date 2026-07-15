@@ -1,5 +1,51 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+const gltfLoader = new GLTFLoader();
+let bikeModelCache = null;
+
+export function preloadBikeModel(url = '/assets/bike.glb') {
+  return new Promise((resolve, reject) => {
+    gltfLoader.load(
+      url,
+      (gltf) => {
+        bikeModelCache = gltf.scene;
+        resolve(bikeModelCache);
+      },
+      undefined,
+      (err) => {
+        console.warn('Bike model not found, falling back to procedural bike:', err.message);
+        bikeModelCache = null;
+        resolve(null);
+      }
+    );
+  });
+}
+
+function findWheelNodes(model) {
+  const wheels = [];
+  model.traverse((node) => {
+    if (node.isMesh && /wheel|tire|rim|tyre/i.test(node.name)) {
+      wheels.push(node);
+    }
+  });
+  return wheels;
+}
+
+function cloneWithMaterials(source) {
+  const clone = source.clone();
+  clone.traverse((node) => {
+    if (node.isMesh && node.material) {
+      if (Array.isArray(node.material)) {
+        node.material = node.material.map((m) => m.clone());
+      } else {
+        node.material = node.material.clone();
+      }
+    }
+  });
+  return clone;
+}
 
 // --- Global Realistic PBR Materials ---
 const metalDark = new THREE.MeshStandardMaterial({
@@ -110,7 +156,7 @@ function createBillboardTexture() {
   return texture;
 }
 
-export function createBike({ color = 0xc7ff32, suitColor = 0x14181b, accent = 0x27d9ff, player = false } = {}) {
+export function createBike({ color = 0xc7ff32, suitColor = 0x14181b, accent = 0x27d9ff, player = false, glbModel = null } = {}) {
   const group = new THREE.Group();
   group.name = player ? 'Player bike' : 'Rival bike';
 
@@ -138,58 +184,100 @@ export function createBike({ color = 0xc7ff32, suitColor = 0x14181b, accent = 0x
   const brakeMat = new THREE.MeshStandardMaterial({ color: 0x9a161d, metalness: 0.4, roughness: 0.35 });
 
   const wheels = [];
-  const frontTireGeom = new THREE.TorusGeometry(0.35, 0.105, 32, 128);
-  const rearTireGeom = new THREE.TorusGeometry(0.35, 0.125, 32, 128);
-  const rimGeom = new THREE.TorusGeometry(0.245, 0.025, 24, 64);
-  const hubGeom = new THREE.CylinderGeometry(0.055, 0.055, 0.32, 32);
+  const proceduralWheels = [];
 
-  [-1.28, 1.18].forEach((z, index) => {
-    const wg = new THREE.Group();
-    wg.position.set(0, 0.48, z);
-    const tire = makeMesh(index === 0 ? frontTireGeom : rearTireGeom, rubber, [0,0,0], [0, Math.PI/2, 0]);
-    const rim = makeMesh(rimGeom, chrome, [0,0,0], [0, Math.PI/2, 0]);
-    const discMat = chrome.clone(); discMat.roughnessMap = anisotropyNoise;
-    const disc = makeMesh(new THREE.CylinderGeometry(0.22, 0.22, 0.018, 64), discMat, [index===0?0.11:-0.1,0,0], [0,0,Math.PI/2]);
-    const hub = makeMesh(hubGeom, metalDark, [0,0,0], [0,0,Math.PI/2]);
-    const caliper = makeMesh(new RoundedBoxGeometry(0.08, 0.14, 0.06, 6, 0.02), brakeMat, [index===0?0.13:-0.12, 0.12, -0.1]);
-    wg.add(tire, rim, disc, hub, caliper);
-    for (let spoke = 0; spoke < 10; spoke++) {
-      const angle = (spoke / 10) * Math.PI * 2;
-      wg.add(createLimb([0,0,0], [0, Math.sin(angle)*0.23, Math.cos(angle)*0.23], 0.009, metalDark));
+  if (glbModel) {
+    const model = cloneWithMaterials(glbModel);
+    group.add(model);
+
+    const foundWheels = findWheelNodes(model);
+    foundWheels.forEach((wheel) => {
+      wheels.push(wheel);
+    });
+
+    if (wheels.length === 0) {
+      const frontTireGeom = new THREE.TorusGeometry(0.35, 0.105, 32, 128);
+      const rearTireGeom = new THREE.TorusGeometry(0.35, 0.125, 32, 128);
+      const rimGeom = new THREE.TorusGeometry(0.245, 0.025, 24, 64);
+      const hubGeom = new THREE.CylinderGeometry(0.055, 0.055, 0.32, 32);
+
+      [-1.28, 1.18].forEach((z, index) => {
+        const wg = new THREE.Group();
+        wg.position.set(0, 0.48, z);
+        const tire = makeMesh(index === 0 ? frontTireGeom : rearTireGeom, rubber, [0,0,0], [0, Math.PI/2, 0]);
+        const rim = makeMesh(rimGeom, chrome, [0,0,0], [0, Math.PI/2, 0]);
+        const discMat = chrome.clone(); discMat.roughnessMap = anisotropyNoise;
+        const disc = makeMesh(new THREE.CylinderGeometry(0.22, 0.22, 0.018, 64), discMat, [index===0?0.11:-0.1,0,0], [0,0,Math.PI/2]);
+        const hub = makeMesh(hubGeom, metalDark, [0,0,0], [0,0,Math.PI/2]);
+        const caliper = makeMesh(new RoundedBoxGeometry(0.08, 0.14, 0.06, 6, 0.02), brakeMat, [index===0?0.13:-0.12, 0.12, -0.1]);
+        wg.add(tire, rim, disc, hub, caliper);
+        for (let spoke = 0; spoke < 10; spoke++) {
+          const angle = (spoke / 10) * Math.PI * 2;
+          wg.add(createLimb([0,0,0], [0, Math.sin(angle)*0.23, Math.cos(angle)*0.23], 0.009, metalDark));
+        }
+        if (index === 0) wg.rotation.x = -0.035;
+        group.add(wg);
+        wheels.push(wg);
+        proceduralWheels.push(wg);
+      });
     }
-    if (index === 0) wg.rotation.x = -0.035;
-    group.add(wg);
-    wheels.push(wg);
-  });
+  } else {
+    const frontTireGeom = new THREE.TorusGeometry(0.35, 0.105, 32, 128);
+    const rearTireGeom = new THREE.TorusGeometry(0.35, 0.125, 32, 128);
+    const rimGeom = new THREE.TorusGeometry(0.245, 0.025, 24, 64);
+    const hubGeom = new THREE.CylinderGeometry(0.055, 0.055, 0.32, 32);
 
-  const frame = makeMesh(new RoundedBoxGeometry(0.22,0.22,1.58,8,0.04), metalDark, [0,0.84,0.02], [-0.03,0,0]);
-  const engine = makeMesh(new RoundedBoxGeometry(0.66,0.54,0.7,8,0.08), metalDark, [0,0.93,0.17]);
-  const engineInset = makeMesh(new THREE.CylinderGeometry(0.2,0.2,0.7,32), chrome, [0,0.96,0.18], [0,0,Math.PI/2]);
-  const fairing = makeMesh(new RoundedBoxGeometry(0.82,0.72,1.34,12,0.18), paint, [0,1.08,-0.58], [-0.08,0,0]);
-  fairing.scale.set(0.9,1,1);
-  const fairingCut = makeMesh(new RoundedBoxGeometry(0.42,0.3,0.82,8,0.08), carbon, [0,0.88,-0.55]);
-  const tank = makeMesh(new THREE.SphereGeometry(0.52,48,36), paint, [0,1.31,0.14]);
-  tank.scale.set(0.78,0.68,1.05);
-  const seat = makeMesh(new RoundedBoxGeometry(0.56,0.15,0.76,8,0.06), leather, [0,1.37,0.78], [-0.08,0,0]);
-  const tail = makeMesh(new RoundedBoxGeometry(0.48,0.27,0.66,8,0.07), paint, [0,1.3,1.08], [-0.18,0,0]);
-  const windshield = makeMesh(new THREE.SphereGeometry(0.42,48,36,0,Math.PI*2,0,Math.PI*0.52), visor, [0,1.52,-0.72], [0.16,0,0]);
-  windshield.scale.set(0.74,0.7,0.78);
-  const forkLeft = createLimb([-0.22,1.05,-0.6], [-0.18,0.53,-1.27], 0.045, chrome);
-  const forkRight = createLimb([0.22,1.05,-0.6], [0.18,0.53,-1.27], 0.045, chrome);
-  const swingLeft = createLimb([-0.23,0.78,0.24], [-0.18,0.5,1.18], 0.052, metalDark);
-  const swingRight = createLimb([0.23,0.78,0.24], [0.18,0.5,1.18], 0.052, metalDark);
-  const handlebar = makeMesh(new THREE.CylinderGeometry(0.028,0.028,0.84,24), metalDark, [0,1.51,-0.62], [0,0,Math.PI/2]);
-  const exhaustLeft = createLimb([-0.3,0.76,0.1], [-0.35,0.69,1.18], 0.07, chrome);
-  const exhaustRight = createLimb([0.3,0.76,0.1], [0.35,0.69,1.18], 0.07, chrome);
-  const chain = makeMesh(new THREE.BoxGeometry(0.022,0.045,1.08), metalDark, [-0.25,0.59,0.71], [-0.13,0,0]);
-  const leftPanel = makeMesh(new RoundedBoxGeometry(0.08,0.44,0.86,6,0.04), paint, [-0.43,1.04,-0.42], [0.05,0.08,-0.08]);
-  const rightPanel = leftPanel.clone(); rightPanel.position.x = 0.43; rightPanel.rotation.y = -0.08;
-  const headlightLeft = makeMesh(new RoundedBoxGeometry(0.23,0.09,0.035,4,0.02), accentMat, [-0.18,1.23,-1.275], [0,0,-0.05]);
-  const headlightRight = headlightLeft.clone(); headlightRight.position.x = 0.18;
-  const tailLightMat = new THREE.MeshStandardMaterial({ color: 0xff183d, emissive: 0xff183d, emissiveIntensity: 8.5 });
-  const tailLight = makeMesh(new RoundedBoxGeometry(0.28,0.08,0.04,4,0.02), tailLightMat, [0,1.31,1.42]);
+    [-1.28, 1.18].forEach((z, index) => {
+      const wg = new THREE.Group();
+      wg.position.set(0, 0.48, z);
+      const tire = makeMesh(index === 0 ? frontTireGeom : rearTireGeom, rubber, [0,0,0], [0, Math.PI/2, 0]);
+      const rim = makeMesh(rimGeom, chrome, [0,0,0], [0, Math.PI/2, 0]);
+      const discMat = chrome.clone(); discMat.roughnessMap = anisotropyNoise;
+      const disc = makeMesh(new THREE.CylinderGeometry(0.22, 0.22, 0.018, 64), discMat, [index===0?0.11:-0.1,0,0], [0,0,Math.PI/2]);
+      const hub = makeMesh(hubGeom, metalDark, [0,0,0], [0,0,Math.PI/2]);
+      const caliper = makeMesh(new RoundedBoxGeometry(0.08, 0.14, 0.06, 6, 0.02), brakeMat, [index===0?0.13:-0.12, 0.12, -0.1]);
+      wg.add(tire, rim, disc, hub, caliper);
+      for (let spoke = 0; spoke < 10; spoke++) {
+        const angle = (spoke / 10) * Math.PI * 2;
+        wg.add(createLimb([0,0,0], [0, Math.sin(angle)*0.23, Math.cos(angle)*0.23], 0.009, metalDark));
+      }
+      if (index === 0) wg.rotation.x = -0.035;
+      group.add(wg);
+      wheels.push(wg);
+    });
 
-  // Enhanced flames with glow
+    const frame = makeMesh(new RoundedBoxGeometry(0.22,0.22,1.58,8,0.04), metalDark, [0,0.84,0.02], [-0.03,0,0]);
+    const engine = makeMesh(new RoundedBoxGeometry(0.66,0.54,0.7,8,0.08), metalDark, [0,0.93,0.17]);
+    const engineInset = makeMesh(new THREE.CylinderGeometry(0.2,0.2,0.7,32), chrome, [0,0.96,0.18], [0,0,Math.PI/2]);
+    const fairing = makeMesh(new RoundedBoxGeometry(0.82,0.72,1.34,12,0.18), paint, [0,1.08,-0.58], [-0.08,0,0]);
+    fairing.scale.set(0.9,1,1);
+    const fairingCut = makeMesh(new RoundedBoxGeometry(0.42,0.3,0.82,8,0.08), carbon, [0,0.88,-0.55]);
+    const tank = makeMesh(new THREE.SphereGeometry(0.52,48,36), paint, [0,1.31,0.14]);
+    tank.scale.set(0.78,0.68,1.05);
+    const seat = makeMesh(new RoundedBoxGeometry(0.56,0.15,0.76,8,0.06), leather, [0,1.37,0.78], [-0.08,0,0]);
+    const tail = makeMesh(new RoundedBoxGeometry(0.48,0.27,0.66,8,0.07), paint, [0,1.3,1.08], [-0.18,0,0]);
+    const windshield = makeMesh(new THREE.SphereGeometry(0.42,48,36,0,Math.PI*2,0,Math.PI*0.52), visor, [0,1.52,-0.72], [0.16,0,0]);
+    windshield.scale.set(0.74,0.7,0.78);
+    const forkLeft = createLimb([-0.22,1.05,-0.6], [-0.18,0.53,-1.27], 0.045, chrome);
+    const forkRight = createLimb([0.22,1.05,-0.6], [0.18,0.53,-1.27], 0.045, chrome);
+    const swingLeft = createLimb([-0.23,0.78,0.24], [-0.18,0.5,1.18], 0.052, metalDark);
+    const swingRight = createLimb([0.23,0.78,0.24], [0.18,0.5,1.18], 0.052, metalDark);
+    const handlebar = makeMesh(new THREE.CylinderGeometry(0.028,0.028,0.84,24), metalDark, [0,1.51,-0.62], [0,0,Math.PI/2]);
+    const exhaustLeft = createLimb([-0.3,0.76,0.1], [-0.35,0.69,1.18], 0.07, chrome);
+    const exhaustRight = createLimb([0.3,0.76,0.1], [0.35,0.69,1.18], 0.07, chrome);
+    const chain = makeMesh(new THREE.BoxGeometry(0.022,0.045,1.08), metalDark, [-0.25,0.59,0.71], [-0.13,0,0]);
+    const leftPanel = makeMesh(new RoundedBoxGeometry(0.08,0.44,0.86,6,0.04), paint, [-0.43,1.04,-0.42], [0.05,0.08,-0.08]);
+    const rightPanel = leftPanel.clone(); rightPanel.position.x = 0.43; rightPanel.rotation.y = -0.08;
+    const headlightLeft = makeMesh(new RoundedBoxGeometry(0.23,0.09,0.035,4,0.02), accentMat, [-0.18,1.23,-1.275], [0,0,-0.05]);
+    const headlightRight = headlightLeft.clone(); headlightRight.position.x = 0.18;
+    const tailLightMat = new THREE.MeshStandardMaterial({ color: 0xff183d, emissive: 0xff183d, emissiveIntensity: 8.5 });
+    const tailLight = makeMesh(new RoundedBoxGeometry(0.28,0.08,0.04,4,0.02), tailLightMat, [0,1.31,1.42]);
+
+    group.add(frame, engine, engineInset, fairing, fairingCut, tank, seat, tail, windshield,
+      forkLeft, forkRight, swingLeft, swingRight, handlebar, exhaustLeft, exhaustRight,
+      chain, leftPanel, rightPanel, headlightLeft, headlightRight, tailLight);
+  }
+
   const flameMat = new THREE.MeshBasicMaterial({ color: 0x39e6ff, transparent: true, opacity: 0.78, blending: THREE.AdditiveBlending });
   const flameCoreMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending });
   const flames = [];
@@ -201,10 +289,6 @@ export function createBike({ color = 0xc7ff32, suitColor = 0x14181b, accent = 0x
     group.add(flame, flameCore);
     flames.push(flame);
   });
-
-  group.add(frame, engine, engineInset, fairing, fairingCut, tank, seat, tail, windshield,
-    forkLeft, forkRight, swingLeft, swingRight, handlebar, exhaustLeft, exhaustRight,
-    chain, leftPanel, rightPanel, headlightLeft, headlightRight, tailLight);
 
   const rider = new THREE.Group();
   const pelvis = makeMesh(new THREE.BoxGeometry(0.48,0.3,0.42), suit, [0,1.64,0.58], [-0.15,0,0]);

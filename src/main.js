@@ -46,7 +46,7 @@ try {
     showWebglError(reason);
   } else {
     const game = new RoadRashGame(canvas);
-    game.init();
+    await game.init();
     window.roadRashGame = game;
   }
 } catch (error) {
