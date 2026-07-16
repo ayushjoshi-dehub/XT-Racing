@@ -68,7 +68,26 @@ npm run preview
 
 ## 🌐 Deploy
 
-The project is configured for static deployment. Build outputs go to `dist/` and can be hosted on any static host (Vercel, Netlify, Cloudflare Pages, GitHub Pages, etc.).
+This project is configured for **Vercel** (see `vercel.json`). Build outputs go to `dist/`.
+
+### Deploy to Vercel
+
+1. Push the repo to GitHub/GitLab/Bitbucket.
+2. In Vercel, import the repository. Vercel auto-detects the Vite config:
+   - **Build Command:** `npm run build`
+   - **Output Directory:** `dist`
+3. To use the production URL `https://xtracing.vercel.app/`:
+   - Create a Vercel project named **xtracing** (this becomes `xtracing.vercel.app`), or
+   - Add a **Production Domain** / **Custom Domain** of `xtracing.vercel.app` in the project's Domain settings.
+4. Click **Deploy**.
+
+Alternatively, deploy from the CLI:
+
+```powershell
+npm i -g vercel
+vercel            # preview
+vercel --prod     # production
+```
 
 ## 📦 Project Structure
 
