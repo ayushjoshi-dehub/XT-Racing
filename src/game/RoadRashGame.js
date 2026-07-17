@@ -368,7 +368,7 @@ export class RoadRashGame {
     badge.style.zIndex = '9999';
     badge.style.pointerEvents = 'none';
     badge.style.letterSpacing = '1.5px';
-    badge.textContent = hasWebGPU ? 'ENGINE CORE // WEBGPU ACTIVE' : 'ENGINE CORE // WEBGL HIGH-FIDELITY';
+    
     document.body.appendChild(badge);
 
     this.scene = new THREE.Scene();
