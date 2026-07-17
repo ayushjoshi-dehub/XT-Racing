@@ -1017,6 +1017,7 @@ export class RoadRashGame {
         this.applyWorldTheme(worldId);
         if (this.dom.worldHint && worldHints[worldId]) {
           this.dom.worldHint.textContent = worldHints[worldId];
+          
         }
       });
     });
