@@ -68,6 +68,147 @@
         </div>
       </section>
 
+      <!-- ─── Race Setup Screen ──────────────────────────────────────────────── -->
+      <section id="setup-screen" class="overlay setup-screen" aria-labelledby="setup-title">
+        <div class="setup-card glass-panel animate-fade-in">
+          <div class="setup-header">
+            <div>
+              <p class="eyebrow">PREPARE YOUR MACHINE & ENV</p>
+              <h2 id="setup-title">RACE CUSTOMIZATION</h2>
+            </div>
+            <button id="setup-back" class="close-btn" aria-label="Back to main menu">✕</button>
+          </div>
+
+          <div class="setup-body">
+            <!-- Bike Blueprint selection with custom descriptions and visual profiles -->
+            <div class="setup-section">
+              <h3 class="setup-section-title">1. BIKE ARCHITECTURE <span id="bike-desc-hint" class="desc-hint">// Sports Aerodynamics</span></h3>
+              <div class="bento-options bike-grid">
+                <button type="button" class="bento-btn bike-btn is-active" data-bike="sports" id="btn-bike-sports">
+                  <div class="bento-btn-header">
+                    <span class="btn-title">XT-SPORTS</span>
+                    <span class="btn-stat">PHANTOM</span>
+                  </div>
+                  <p class="btn-desc">Sleek aerodynamic frame. Agile cornering & balanced top speed.</p>
+                  <div class="btn-bars">
+                    <span>SPD <i class="bar"><em style="width: 75%"></em></i></span>
+                    <span>HND <i class="bar"><em style="width: 85%"></em></i></span>
+                  </div>
+                </button>
+                <button type="button" class="bento-btn bike-btn" data-bike="bullet" id="btn-bike-bullet">
+                  <div class="bento-btn-header">
+                    <span class="btn-title">XT-BULLET</span>
+                    <span class="btn-stat">CRIMSON</span>
+                  </div>
+                  <p class="btn-desc">Heavy muscle cruiser. Naked chopper chassis with brutal acceleration.</p>
+                  <div class="btn-bars">
+                    <span>SPD <i class="bar"><em style="width: 80%"></em></i></span>
+                    <span>ACC <i class="bar"><em style="width: 95%"></em></i></span>
+                  </div>
+                </button>
+                <button type="button" class="bento-btn bike-btn" data-bike="modern" id="btn-bike-modern">
+                  <div class="bento-btn-header">
+                    <span class="btn-title">XT-MODERN</span>
+                    <span class="btn-stat">VIPER</span>
+                  </div>
+                  <p class="btn-desc">Cyberpunk hyperbike. Carbon-fiber panels & dual magnetic thrusters.</p>
+                  <div class="btn-bars">
+                    <span>SPD <i class="bar"><em style="width: 90%"></em></i></span>
+                    <span>NTR <i class="bar"><em style="width: 90%"></em></i></span>
+                  </div>
+                </button>
+                <button type="button" class="bento-btn bike-btn" data-bike="shadow" id="btn-bike-shadow">
+                  <div class="bento-btn-header">
+                    <span class="btn-title">XT-SHADOW</span>
+                    <span class="btn-stat">COSMIC</span>
+                  </div>
+                  <p class="btn-desc">Ultra-armored combat beast. Heavy hull, massive defense & nitro-tank.</p>
+                  <div class="btn-bars">
+                    <span>ARM <i class="bar"><em style="width: 95%"></em></i></span>
+                    <span>SPD <i class="bar"><em style="width: 70%"></em></i></span>
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            <!-- Environment Locations selection -->
+            <div class="setup-section">
+              <h3 class="setup-section-title">2. CODESPACE ENVIRONMENT <span id="world-desc-hint" class="desc-hint">// Green Coastline</span></h3>
+              <div class="bento-options environment-grid">
+                <button type="button" class="bento-btn world-btn is-active" data-world="remote" id="btn-world-remote">
+                  <div class="bento-btn-header">
+                    <span class="btn-title">REMOTE AREA</span>
+                  </div>
+                  <p class="btn-desc">Lush coastal highways, green forests & bright daytime skies.</p>
+                </button>
+                <button type="button" class="bento-btn world-btn" data-world="city" id="btn-world-city">
+                  <div class="bento-btn-header">
+                    <span class="btn-title">NEON METROPOLIS</span>
+                  </div>
+                  <p class="btn-desc">Rainy midnight cyberpunk city with glistening wet asphalt reflections.</p>
+                </button>
+                <button type="button" class="bento-btn world-btn" data-world="desert" id="btn-world-desert">
+                  <div class="bento-btn-header">
+                    <span class="btn-title">SANDSTONE</span>
+                  </div>
+                  <p class="btn-desc">Amber sands, massive dry stone arches & intense sandstorm dust.</p>
+                </button>
+                <button type="button" class="bento-btn world-btn" data-world="snow" id="btn-world-snow">
+                  <div class="bento-btn-header">
+                    <span class="btn-title">BLIZZARD RIDGE</span>
+                  </div>
+                  <p class="btn-desc">Subzero frozen peaks, snowy pine forests & drifting ice blizzards.</p>
+                </button>
+                <button type="button" class="bento-btn world-btn" data-world="hilly" id="btn-world-hilly">
+                  <div class="bento-btn-header">
+                    <span class="btn-title">SUNSET VALLEY</span>
+                  </div>
+                  <p class="btn-desc">Twisting hilly ridges, deep mountain passes & beautiful violet sunsets.</p>
+                </button>
+              </div>
+            </div>
+
+            <!-- Race Hardness (Difficulty) selection -->
+            <div class="setup-section">
+              <h3 class="setup-section-title">3. RACE HARDNESS <span id="diff-desc-hint" class="desc-hint">// Standard Race</span></h3>
+              <div class="bento-options difficulty-grid">
+                <button type="button" class="bento-btn difficulty-btn" data-difficulty="chill" id="btn-diff-chill">
+                  <div class="bento-btn-header">
+                    <span class="btn-title">CHILL</span>
+                  </div>
+                  <p class="btn-desc">Slower pack, lighter traffic, rapid health regeneration.</p>
+                </button>
+                <button type="button" class="bento-btn difficulty-btn is-active" data-difficulty="speedway" id="btn-diff-speedway">
+                  <div class="bento-btn-header">
+                    <span class="btn-title">SPEEDWAY</span>
+                  </div>
+                  <p class="btn-desc">Balanced combat intensity. Standard XT professional parameters.</p>
+                </button>
+                <button type="button" class="bento-btn difficulty-btn" data-difficulty="warrior" id="btn-diff-warrior">
+                  <div class="bento-btn-header">
+                    <span class="btn-title">WARRIOR</span>
+                  </div>
+                  <p class="btn-desc">Aggressive rivals, thick traffic, and double crash penalty.</p>
+                </button>
+                <button type="button" class="bento-btn difficulty-btn" data-difficulty="death" id="btn-diff-death">
+                  <div class="bento-btn-header">
+                    <span class="btn-title">DEATH RUN</span>
+                  </div>
+                  <p class="btn-desc">Bullet-fast rivals with passive damage & zero health regeneration.</p>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="setup-actions">
+            <button id="setup-start-button" class="primary-button launch-button">
+              <span>ENGAGE IGNITION // START RUN</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5l8 7-8 7V5z" /></svg>
+            </button>
+          </div>
+        </div>
+      </section>
+
       <!-- ─── HUD ────────────────────────────────────────────────────────────── -->
       <section id="hud" class="hud" aria-label="Race telemetry">
         <div class="hud-position glass-panel">

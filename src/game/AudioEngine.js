@@ -29,6 +29,7 @@ export class AudioEngine {
     this._lastGear = -1;
     this._lastSpeed = 0;
     this._backfireTimer = 0;
+    this.bikeType = 'sports';
   }
 
   start() {
@@ -175,7 +176,67 @@ export class AudioEngine {
       this.engineOscillators.push({ osc, ratio, layerGain, baseGain: gain });
     });
 
+    if (this.bikeType) {
+      this.setBikeType(this.bikeType);
+    }
+
     this.started = true;
+  }
+
+  setBikeType(type) {
+    this.bikeType = type || 'sports';
+    if (!this.started || !this.engineOscillators.length) return;
+
+    const now = this.context.currentTime;
+    
+    const profiles = {
+      sports: [
+        { type: 'sawtooth', ratio: 1.0, gain: 0.40 },
+        { type: 'sawtooth', ratio: 1.5, gain: 0.25 },
+        { type: 'triangle', ratio: 0.5, gain: 0.35 },
+        { type: 'square',   ratio: 2.0, gain: 0.12 },
+        { type: 'sine',     ratio: 4.0, gain: 0.05 },
+      ],
+      bullet: [
+        { type: 'sawtooth', ratio: 1.0, gain: 0.55 },
+        { type: 'sawtooth', ratio: 0.5, gain: 0.45 },
+        { type: 'triangle', ratio: 0.25, gain: 0.60 },
+        { type: 'square',   ratio: 1.0, gain: 0.35 },
+        { type: 'sine',     ratio: 2.0, gain: 0.01 },
+      ],
+      modern: [
+        { type: 'sine',     ratio: 1.0, gain: 0.30 },
+        { type: 'triangle', ratio: 2.0, gain: 0.35 },
+        { type: 'sine',     ratio: 0.5, gain: 0.20 },
+        { type: 'sine',     ratio: 3.0, gain: 0.30 },
+        { type: 'sine',     ratio: 6.0, gain: 0.18 },
+      ],
+      shadow: [
+        { type: 'sawtooth', ratio: 1.0, gain: 0.55 },
+        { type: 'square',   ratio: 1.5, gain: 0.40 },
+        { type: 'sawtooth', ratio: 0.5, gain: 0.50 },
+        { type: 'sawtooth', ratio: 2.0, gain: 0.25 },
+        { type: 'triangle', ratio: 3.0, gain: 0.08 },
+      ]
+    };
+
+    const p = profiles[this.bikeType] || profiles.sports;
+    this.engineOscillators.forEach((layer, i) => {
+      if (p[i]) {
+        layer.osc.type = p[i].type;
+        layer.ratio = p[i].ratio;
+        layer.baseGain = p[i].gain;
+        layer.layerGain.gain.setTargetAtTime(p[i].gain, now, 0.05);
+      }
+    });
+
+    if (this.exhaustWaveshaper) {
+      let distAmount = 44;
+      if (this.bikeType === 'bullet') distAmount = 25;
+      if (this.bikeType === 'modern') distAmount = 5;
+      if (this.bikeType === 'shadow') distAmount = 85;
+      this.exhaustWaveshaper.curve = this.makeDistortionCurve(distAmount);
+    }
   }
 
   makeDistortionCurve(amount) {
@@ -220,7 +281,14 @@ export class AudioEngine {
     }
     this._lastSpeed = speed;
 
-    const baseFrequency = 28 + rpm * 115;
+    let baseFrequency = 28 + rpm * 115;
+    if (this.bikeType === 'bullet') {
+      baseFrequency = 15 + rpm * 60;
+    } else if (this.bikeType === 'modern') {
+      baseFrequency = 52 + rpm * 240;
+    } else if (this.bikeType === 'shadow') {
+      baseFrequency = 20 + rpm * 82;
+    }
 
     // Engine oscillators
     this.engineOscillators.forEach(({ osc, ratio, layerGain, baseGain }) => {

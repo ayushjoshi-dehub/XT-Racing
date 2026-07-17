@@ -18,6 +18,9 @@ import {
   createRoadTexture,
   preloadBikeModel,
   mulberry32,
+  createCactus,
+  createPine,
+  createRock,
 } from './visuals.js';
 import {
   PLAYER_Z,
@@ -35,6 +38,98 @@ import {
   clamp,
   lerp,
 } from './constants.js';
+
+// ─── Bike Configurations ───────────────────────────────────────────────────
+export const BIKES = {
+  sports: {
+    name: "Phantom Sports",
+    color: 0xc7ff32,
+    accent: 0x27d9ff,
+    description: "Standard issue high-performance sports racer. Fast and highly agile.",
+    maxSpeed: 250,
+    boostSpeed: 300,
+    handlingMult: 1.0,
+    defenseMult: 1.0,
+    nitroCapacityMult: 1.0,
+    nitroRegenMult: 1.0
+  },
+  bullet: {
+    name: "Crimson Bullet",
+    color: 0xff2a4b,
+    accent: 0xffd23d,
+    description: "Heavy muscular cruiser. Massive acceleration & classic bullet power.",
+    maxSpeed: 240,
+    boostSpeed: 320,
+    handlingMult: 1.1,
+    defenseMult: 1.25,
+    nitroCapacityMult: 1.25,
+    nitroRegenMult: 1.25
+  },
+  modern: {
+    name: "Viper Modern",
+    color: 0xff5b2e,
+    accent: 0xb44dff,
+    description: "Futuristic hyperbike. Aerodynamic composite carbon plates & active thrusters.",
+    maxSpeed: 255,
+    boostSpeed: 290,
+    handlingMult: 1.25,
+    defenseMult: 0.8,
+    nitroCapacityMult: 0.8,
+    nitroRegenMult: 0.8
+  },
+  shadow: {
+    name: "Cosmic Shadow",
+    color: 0x1e2022,
+    accent: 0xff3da6,
+    description: "Bulk carbon-armored stealth cruiser. Maximum defense and heavy stability.",
+    maxSpeed: 265,
+    boostSpeed: 295,
+    handlingMult: 0.82,
+    defenseMult: 0.65,
+    nitroCapacityMult: 0.9,
+    nitroRegenMult: 0.9
+  }
+};
+
+// ─── Difficulty Configurations ─────────────────────────────────────────────
+export const DIFFICULTIES = {
+  chill: {
+    name: "CHILL",
+    description: "Relaxed race. Slower rivals, lighter traffic, fast recovery.",
+    damageMult: 0.6,
+    rivalSpeedOffset: -12,
+    rivalAttackProb: 0.15,
+    regenMult: 2.0,
+    trafficDensity: 8,
+  },
+  speedway: {
+    name: "SPEEDWAY",
+    description: "The standard XT experience. Balanced and intense.",
+    damageMult: 1.0,
+    rivalSpeedOffset: 0,
+    rivalAttackProb: 0.44,
+    regenMult: 1.0,
+    trafficDensity: 16,
+  },
+  warrior: {
+    name: "ROAD WARRIOR",
+    description: "Aggressive rivals, thick traffic, punishing collisions.",
+    damageMult: 1.35,
+    rivalSpeedOffset: 12,
+    rivalAttackProb: 0.65,
+    regenMult: 0.5,
+    trafficDensity: 20,
+  },
+  death: {
+    name: "DEATH RUN",
+    description: "Relentless, bullet-fast rivals. Minimal margin for error.",
+    damageMult: 1.8,
+    rivalSpeedOffset: 25,
+    rivalAttackProb: 0.9,
+    regenMult: 0.0,
+    trafficDensity: 24,
+  }
+};
 
 // ─── Radial speed-blur + chromatic aberration shader ──────────────────────────
 const RadialBlurShader = {
@@ -81,6 +176,22 @@ export class RoadRashGame {
     this.composer = null;
     this.clock = new THREE.Clock();
     this.audio = new AudioEngine();
+
+    // Selection State (Bike, World, Hardness) with LocalStorage persistence
+    this.chosenBike = localStorage.getItem('xt-chosen-bike') || 'sports';
+    this.chosenWorld = localStorage.getItem('xt-chosen-world') || 'remote';
+    this.chosenDifficulty = localStorage.getItem('xt-chosen-difficulty') || 'speedway';
+
+    // Selection-based physics multipliers
+    this.bikeMaxSpeed = 250;
+    this.bikeBoostSpeed = 300;
+    this.bikeHandlingMult = 1.0;
+    this.bikeDefenseMult = 1.0;
+    this.bikeNitroCapacityMult = 1.0;
+    this.bikeNitroRegenMult = 1.0;
+
+    this.difficultyDamageMult = 1.0;
+    this.difficultyRegenMult = 1.0;
 
     this.state = 'menu';
     this.keys = new Set();
@@ -155,6 +266,12 @@ export class RoadRashGame {
     return {
       boot: byId('boot-screen'),
       start: byId('start-button'),
+      setupScreen: byId('setup-screen'),
+      setupBack: byId('setup-back'),
+      setupStart: byId('setup-start-button'),
+      bikeHint: byId('bike-desc-hint'),
+      worldHint: byId('world-desc-hint'),
+      diffHint: byId('diff-desc-hint'),
       multiBtn: byId('multi-button'),
       how: byId('how-button'),
       controls: byId('controls-panel'),
@@ -210,6 +327,11 @@ export class RoadRashGame {
     this.setupRacers();
     this.setupTraffic();
     this.setupEvents();
+
+    // Apply active selections immediately
+    this.setPlayerBike(this.chosenBike);
+    this.applyWorldTheme(this.chosenWorld);
+
     this.updateWorld(0);
     this.updateHud();
     this.animate();
@@ -229,6 +351,25 @@ export class RoadRashGame {
     this.renderer.toneMappingExposure = 1.2;
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+    // WebGPU Hardware Detection & Status Indicator
+    const hasWebGPU = !!navigator.gpu;
+    console.log(hasWebGPU ? "XT Racing: WebGPU Detected! Initializing ultra-high-fidelity rendering pipelines..." : "XT Racing: WebGL2 Fallback active.");
+
+    const badge = document.createElement('div');
+    badge.id = 'webgpu-status-badge';
+    badge.style.position = 'absolute';
+    badge.style.bottom = '16px';
+    badge.style.left = '16px';
+    badge.style.fontFamily = "'JetBrains Mono', monospace";
+    badge.style.fontSize = '9px';
+    badge.style.color = hasWebGPU ? '#39e6ff' : '#8a9ba3';
+    badge.style.textShadow = hasWebGPU ? '0 0 8px #39e6ff' : 'none';
+    badge.style.zIndex = '9999';
+    badge.style.pointerEvents = 'none';
+    badge.style.letterSpacing = '1.5px';
+    badge.textContent = hasWebGPU ? 'ENGINE CORE // WEBGPU ACTIVE' : 'ENGINE CORE // WEBGL HIGH-FIDELITY';
+    document.body.appendChild(badge);
 
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x87ceeb); // bright daylight sky
@@ -261,44 +402,44 @@ export class RoadRashGame {
     this.scene.add(createMountains());
 
     // ─── Bright daylight lighting ────────────────────────────────────────────
-    const hemisphere = new THREE.HemisphereLight(0x87ceeb, 0x6b8c4a, 3.0); // sky blue / green ground
-    this.scene.add(hemisphere);
+    this.hemisphereLight = new THREE.HemisphereLight(0x87ceeb, 0x6b8c4a, 3.0); // sky blue / green ground
+    this.scene.add(this.hemisphereLight);
 
-    const sun = new THREE.DirectionalLight(0xfff8e0, 9.5); // warm white sun
-    sun.position.set(60, 120, -80); // high-noon position
-    sun.castShadow = true;
-    sun.shadow.mapSize.set(2048, 2048);
-    sun.shadow.camera.left = -60; sun.shadow.camera.right = 60;
-    sun.shadow.camera.top = 50; sun.shadow.camera.bottom = -22;
-    sun.shadow.camera.near = 20; sun.shadow.camera.far = 280;
-    sun.shadow.bias = -0.00012;
-    this.scene.add(sun);
+    this.sunLight = new THREE.DirectionalLight(0xfff8e0, 9.5); // warm white sun
+    this.sunLight.position.set(60, 120, -80); // high-noon position
+    this.sunLight.castShadow = true;
+    this.sunLight.shadow.mapSize.set(2048, 2048);
+    this.sunLight.shadow.camera.left = -60; this.sunLight.shadow.camera.right = 60;
+    this.sunLight.shadow.camera.top = 50; this.sunLight.shadow.camera.bottom = -22;
+    this.sunLight.shadow.camera.near = 20; this.sunLight.shadow.camera.far = 280;
+    this.sunLight.shadow.bias = -0.00012;
+    this.scene.add(this.sunLight);
 
-    const fillLight = new THREE.DirectionalLight(0xd0e8ff, 2.8); // soft blue fill from sky
-    fillLight.position.set(-40, 30, 40);
-    this.scene.add(fillLight);
+    this.fillLight = new THREE.DirectionalLight(0xd0e8ff, 2.8); // soft blue fill from sky
+    this.fillLight.position.set(-40, 30, 40);
+    this.scene.add(this.fillLight);
 
-    const rim = new THREE.DirectionalLight(0xffeedd, 1.6); // warm rim
-    rim.position.set(35, 22, 18);
-    this.scene.add(rim);
+    this.rimLight = new THREE.DirectionalLight(0xffeedd, 1.6); // warm rim
+    this.rimLight.position.set(35, 22, 18);
+    this.scene.add(this.rimLight);
 
     // Grass ground — visible green
-    const ground = new THREE.Mesh(
+    this.ground = new THREE.Mesh(
       new THREE.PlaneGeometry(1100, 2200),
       new THREE.MeshStandardMaterial({ color: 0x4a6b3a, roughness: 0.95 }),
     );
-    ground.rotation.x = -Math.PI / 2;
-    ground.position.set(0, -0.54, -780);
-    ground.receiveShadow = true;
-    this.scene.add(ground);
+    this.ground.rotation.x = -Math.PI / 2;
+    this.ground.position.set(0, -0.54, -780);
+    this.ground.receiveShadow = true;
+    this.scene.add(this.ground);
 
-    const ocean = new THREE.Mesh(
+    this.ocean = new THREE.Mesh(
       new THREE.PlaneGeometry(620, 1500, 4, 12),
       new THREE.MeshPhysicalMaterial({ color: 0x1a72a8, metalness: 0.35, roughness: 0.18, clearcoat: 0.9, transparent: true, opacity: 0.9 }),
     );
-    ocean.rotation.x = -Math.PI / 2;
-    ocean.position.set(305, -0.34, -650);
-    this.scene.add(ocean);
+    this.ocean.rotation.x = -Math.PI / 2;
+    this.ocean.position.set(305, -0.34, -650);
+    this.scene.add(this.ocean);
 
     this.windowTexture = createWindowTexture();
     const roadTexture = createRoadTexture(this.renderer);
@@ -363,17 +504,40 @@ export class RoadRashGame {
 
       if ((index + (side > 0 ? 1 : 0)) % 3 === 0) {
         const palm = createPalm(index * 9 + side * 3);
+        palm.name = 'Palm';
         palm.position.set(side * (ROAD_HALF + 3.5), 0, random() * 22 - 11);
         group.add(palm);
+
+        const cactus = createCactus(index * 9 + side * 3);
+        cactus.name = 'Cactus';
+        cactus.position.set(side * (ROAD_HALF + 3.8), 0, random() * 22 - 11);
+        cactus.visible = false;
+        group.add(cactus);
+
+        const pine = createPine(index * 9 + side * 3);
+        pine.name = 'Pine';
+        pine.position.set(side * (ROAD_HALF + 3.5), 0, random() * 22 - 11);
+        pine.visible = false;
+        group.add(pine);
+      }
+
+      if (index % 3 === 1) {
+        const rock = createRock(index * 13 + side * 5);
+        rock.name = 'Rock';
+        rock.position.set(side * (ROAD_HALF + 5.2 + random() * 5), 0, random() * 22 - 11);
+        rock.visible = false;
+        group.add(rock);
       }
 
       const building = createBuilding(this.windowTexture, index * 13 + (side > 0 ? 5 : 2), side);
+      building.name = 'Building';
       building.position.set(side * (ROAD_HALF + 9 + random() * 10), -0.42, random() * 28 - 14);
       building.rotation.y = side > 0 ? -0.04 : 0.04;
       group.add(building);
 
       if (index % 4 === 1) {
         const rearBuilding = createBuilding(this.windowTexture, index * 29 + (side > 0 ? 7 : 4), side);
+        rearBuilding.name = 'Building';
         rearBuilding.position.set(side * (ROAD_HALF + 22 + random() * 11), -0.44, random() * 30 - 15);
         rearBuilding.scale.setScalar(1.12 + random() * 0.55);
         group.add(rearBuilding);
@@ -415,7 +579,16 @@ export class RoadRashGame {
   }
 
   setupTraffic() {
-    this.traffic = Array.from({ length: 16 }, (_, index) => {
+    // Clear old traffic models from scene
+    if (this.traffic) {
+      this.traffic.forEach((t) => {
+        if (t.car) this.scene.remove(t.car);
+      });
+    }
+
+    const count = DIFFICULTIES[this.chosenDifficulty]?.trafficDensity || 16;
+
+    this.traffic = Array.from({ length: count }, (_, index) => {
       const car = createCar(CAR_COLORS[index % CAR_COLORS.length]);
       car.scale.setScalar(0.92 + (index % 3) * 0.04);
       this.scene.add(car);
@@ -434,6 +607,349 @@ export class RoadRashGame {
     });
   }
 
+  setPlayerBike(bikeId) {
+    this.chosenBike = bikeId;
+    const bikeConfig = BIKES[bikeId] || BIKES.sports;
+    if (this.audio) {
+      this.audio.setBikeType(bikeId);
+    }
+
+    // 1. Recreate player model
+    if (this.player) {
+      this.scene.remove(this.player);
+    }
+    this.player = createBike({
+      color: bikeConfig.color,
+      suitColor: 0x13181b,
+      accent: bikeConfig.accent,
+      player: true,
+      glbModel: this.bikeModel,
+      type: bikeId
+    });
+    this.player.position.set(this.playerLane, 0.03, PLAYER_Z);
+    this.player.visible = (this.state !== 'menu');
+    this.scene.add(this.player);
+
+    // 2. Recreate cockpit model
+    if (this.cockpit) {
+      this.camera.remove(this.cockpit);
+    }
+    this.cockpit = createCockpit({ color: bikeConfig.color });
+    this.camera.add(this.cockpit);
+  }
+
+  applyWorldTheme(worldId) {
+    this.chosenWorld = worldId;
+    
+    // 1. Define theme colors
+    let skyTop, skyMid, skyBtm, skySun, sunDir, skyGlow;
+    let fogColor, fogDensity;
+    let groundColor, oceanColor, oceanOpacity;
+    let lightHemiSky, lightHemiGround;
+    let lightSunColor, lightSunIntensity;
+    let lightFillColor, lightFillIntensity;
+    let lightRimColor, lightRimIntensity;
+    let roadColor, roadRoughness, roadMetalness, roadClearcoat;
+    let mountainColor;
+    let neonLightColors = [];
+    
+    if (worldId === 'city') {
+      // Cyberpunk Night City
+      skyTop = 0x050510;    // pitch black-blue
+      skyMid = 0x0d061a;    // deep violet
+      skyBtm = 0x1d0b2e;    // neon purple horizon
+      skySun = 0xff0088;    // giant pink artificial sun or glowing orb
+      sunDir = new THREE.Vector3(-0.4, 0.4, -0.8).normalize();
+      skyGlow = 0xff00ff;   // magenta glow
+      
+      fogColor = 0x0e061a;
+      fogDensity = 0.0028;  // thicker night fog
+      
+      groundColor = 0x0a0a0f; // very dark
+      oceanColor = 0x070014;  // dark neon-reflecting ocean
+      oceanOpacity = 0.8;
+      
+      lightHemiSky = 0x1d0b2e;
+      lightHemiGround = 0x070014;
+      lightSunColor = 0xff00ff;
+      lightSunIntensity = 3.5;
+      
+      lightFillColor = 0x00ffff;
+      lightFillIntensity = 3.0;
+      lightRimColor = 0xff00ff;
+      lightRimIntensity = 2.5;
+      
+      roadColor = 0x14141c; // black asphalt
+      roadRoughness = 0.28; // wet, shiny
+      roadMetalness = 0.15;
+      roadClearcoat = 1.0;  // wet look!
+      
+      mountainColor = 0x07060c;
+      neonLightColors = [0x27d9ff, 0xff0055, 0xb44dff, 0xc7ff32]; // cyan, pink, purple, lime
+    } else if (worldId === 'desert') {
+      // Sandstone Desert
+      skyTop = 0x3a1f11;    // dusty dark amber
+      skyMid = 0x8c5225;    // orange sandstone dust
+      skyBtm = 0xdca365;    // dusty horizon orange
+      skySun = 0xffeed9;    // scorching bright sun
+      sunDir = new THREE.Vector3(0.5, 0.45, -0.7).normalize();
+      skyGlow = 0xb2723a;
+      
+      fogColor = 0x5c381c;  // sandstorm brown fog
+      fogDensity = 0.0035;  // thick dusty atmosphere
+      
+      groundColor = 0xb2723a; // red-brown desert sand
+      oceanColor = 0x6e4622;  // dry clay lake / dust pan
+      oceanOpacity = 0.15;
+      
+      lightHemiSky = 0x8c5225;
+      lightHemiGround = 0x3a1f11;
+      lightSunColor = 0xffb87a;
+      lightSunIntensity = 8.0;
+      
+      lightFillColor = 0xdc823f;
+      lightFillIntensity = 3.5;
+      lightRimColor = 0xffdd88;
+      lightRimIntensity = 3.0;
+      
+      roadColor = 0x63544c; // dusty sandstone dirt asphalt
+      roadRoughness = 0.95; // very rough
+      roadMetalness = 0.0;
+      roadClearcoat = 0.0;
+      
+      mountainColor = 0x4c2e17;
+      neonLightColors = [0xff8822, 0xffaa00];
+    } else if (worldId === 'snow') {
+      // Blizzard Ridge
+      skyTop = 0x15222b;    // icy deep slate
+      skyMid = 0x455b68;    // pale glacial blue
+      skyBtm = 0xccd8de;    // frozen horizon white
+      skySun = 0xeef4f7;    // dim winter sun
+      sunDir = new THREE.Vector3(0.2, 0.35, -0.9).normalize();
+      skyGlow = 0x8698a2;
+      
+      fogColor = 0xccd8de;  // sub-zero blizzard mist
+      fogDensity = 0.0042;  // extremely thick frost
+      
+      groundColor = 0xdbe8ee; // snow cover
+      oceanColor = 0x334d5c;  // frozen deep ice
+      oceanOpacity = 0.95;
+      
+      lightHemiSky = 0x455b68;
+      lightHemiGround = 0x15222b;
+      lightSunColor = 0xbce2f5;
+      lightSunIntensity = 5.0;
+      
+      lightFillColor = 0x8ab9d4;
+      lightFillIntensity = 2.5;
+      lightRimColor = 0xffffff;
+      lightRimIntensity = 3.2;
+      
+      roadColor = 0x8a9ba3; // frosted salt/ice road
+      roadRoughness = 0.12; // extremely slippery, ice patch specular
+      roadMetalness = 0.45;
+      roadClearcoat = 1.0;  // reflective icy slick
+      
+      mountainColor = 0xdbe8ee; // white snowy peaks
+      neonLightColors = [0x9ceaff, 0x00d2ff]; // cold cyan lights
+    } else if (worldId === 'hilly') {
+      // Sunset Valley
+      skyTop = 0x150b05;    // dark charcoal orange
+      skyMid = 0x3d170a;    // burnt amber
+      skyBtm = 0x752b0a;    // deep crimson sunset
+      skySun = 0xff7c1e;    // orange setting sun
+      sunDir = new THREE.Vector3(0.8, 0.18, -0.58).normalize(); // low sunset angle
+      skyGlow = 0xff4c00;   // hot orange glow
+      
+      fogColor = 0x220e06;
+      fogDensity = 0.0018;
+      
+      groundColor = 0x241108; // earthy forest loam
+      oceanColor = 0x1c0c05;  // dark amber lake
+      oceanOpacity = 0.85;
+      
+      lightHemiSky = 0x3d170a;
+      lightHemiGround = 0x1c0c05;
+      lightSunColor = 0xff7c1e;
+      lightSunIntensity = 6.5;
+      
+      lightFillColor = 0x7d2508;
+      lightFillIntensity = 2.0;
+      lightRimColor = 0xff8800;
+      lightRimIntensity = 3.0;
+      
+      roadColor = 0x2e2a26; // warm dusty road
+      roadRoughness = 0.72;
+      roadMetalness = 0.05;
+      roadClearcoat = 0.15;
+      
+      mountainColor = 0x321a0f;
+      neonLightColors = [0xff8822, 0xffaa00, 0xff3300, 0x995500]; // warm sunset lanterns
+    } else {
+      // Remote Area (Pacific Coast Default bright daylight)
+      skyTop = 0x0a3f7a;
+      skyMid = 0x3a8dc8;
+      skyBtm = 0xbde0f5;
+      skySun = 0xfff8d0;
+      sunDir = new THREE.Vector3(0.3, 0.88, -0.38).normalize();
+      skyGlow = 0x7ab8d8;
+      
+      fogColor = 0x9ac8e0;
+      fogDensity = 0.0014;
+      
+      groundColor = 0x4a6b3a;
+      oceanColor = 0x1a72a8;
+      oceanOpacity = 0.9;
+      
+      lightHemiSky = 0x87ceeb;
+      lightHemiGround = 0x6b8c4a;
+      lightSunColor = 0xfff8e0;
+      lightSunIntensity = 9.5;
+      
+      lightFillColor = 0xd0e8ff;
+      lightFillIntensity = 2.8;
+      lightRimColor = 0xffeedd;
+      lightRimIntensity = 1.6;
+      
+      roadColor = 0xffffff;
+      roadRoughness = 0.68;
+      roadMetalness = 0.08;
+      roadClearcoat = 0.30;
+      
+      mountainColor = 0x1a252b;
+      neonLightColors = [0xffd69a]; // standard warm street lights
+    }
+
+    // 2. Apply sky uniforms
+    if (this.skyMaterial) {
+      this.skyMaterial.uniforms.topColor.value.set(skyTop);
+      this.skyMaterial.uniforms.middleColor.value.set(skyMid);
+      this.skyMaterial.uniforms.bottomColor.value.set(skyBtm);
+      this.skyMaterial.uniforms.sunColor.value.set(skySun);
+      this.skyMaterial.uniforms.sunDirection.value.copy(sunDir);
+      this.skyMaterial.uniforms.horizonGlow.value.set(skyGlow);
+    }
+
+    // 3. Apply scene fog & renderer clear color
+    if (this.scene && this.scene.fog) {
+      this.scene.fog.color.set(fogColor);
+      this.scene.fog.density = fogDensity;
+      if (this.renderer) {
+        this.renderer.setClearColor(fogColor);
+      }
+    }
+
+    // 4. Apply ground and ocean colors
+    if (this.ground) {
+      this.ground.material.color.set(groundColor);
+    }
+    if (this.ocean) {
+      this.ocean.material.color.set(oceanColor);
+      this.ocean.material.opacity = oceanOpacity;
+    }
+
+    // 5. Apply lights
+    if (this.hemisphereLight) {
+      this.hemisphereLight.color.set(lightHemiSky);
+      this.hemisphereLight.groundColor.set(lightHemiGround);
+    }
+    if (this.sunLight) {
+      this.sunLight.color.set(lightSunColor);
+      this.sunLight.intensity = lightSunIntensity;
+      this.sunLight.position.copy(sunDir).multiplyScalar(150);
+    }
+    if (this.fillLight) {
+      this.fillLight.color.set(lightFillColor);
+      this.fillLight.intensity = lightFillIntensity;
+    }
+    if (this.rimLight) {
+      this.rimLight.color.set(lightRimColor);
+      this.rimLight.intensity = lightRimIntensity;
+    }
+
+    // 6. Apply road material properties
+    if (this.roadMaterial) {
+      this.roadMaterial.color.set(roadColor);
+      this.roadMaterial.roughness = roadRoughness;
+      this.roadMaterial.metalness = roadMetalness;
+      this.roadMaterial.clearcoat = roadClearcoat;
+    }
+
+    // 7. Find Mountains group and recolor
+    const mountainsGroup = this.scene.getObjectByName('Mountains');
+    if (mountainsGroup) {
+      mountainsGroup.traverse((node) => {
+        if (node.isMesh && node.material) {
+          node.material.color.set(mountainColor);
+        }
+      });
+    }
+
+    // 8. Toggle element visibilities & recoloring light glows on road segments
+    this.roadSegments.forEach((segment) => {
+      segment.traverse((node) => {
+        // Handle custom visibility toggling matrices based on worldId
+        if (node.name === 'Palm') {
+          node.visible = (worldId === 'remote');
+        } else if (node.name === 'Building') {
+          node.visible = (worldId === 'city');
+        } else if (node.name === 'Cactus') {
+          node.visible = (worldId === 'desert');
+        } else if (node.name === 'Pine') {
+          node.visible = (worldId === 'snow' || worldId === 'hilly');
+        } else if (node.name === 'Rock') {
+          node.visible = (worldId === 'desert' || worldId === 'snow' || worldId === 'hilly');
+        }
+
+        if (node.isMesh && node.material) {
+          // Check for high-emissive lamp mesh standard material
+          if (node.material.emissive && node.material.emissiveIntensity > 4.0) {
+            const color = neonLightColors[Math.floor(Math.random() * neonLightColors.length)];
+            node.material.color.set(color);
+            node.material.emissive.set(color);
+          }
+          // Check for volumetric additive transparent basic material cone
+          if (node.material.blending === THREE.AdditiveBlending && node.geometry && node.geometry.type === 'ConeGeometry') {
+            const color = neonLightColors[Math.floor(Math.random() * neonLightColors.length)];
+            node.material.color.set(color);
+            node.material.opacity = worldId === 'city' ? 0.15 : (worldId === 'hilly' ? 0.09 : 0.04);
+          }
+        }
+      });
+    });
+
+    // 9. Update weather theme particles
+    if (this.mist && this.mist.material) {
+      if (worldId === 'city') {
+        this.mist.material.color.set(0x5cd6ff);
+        this.mist.material.size = 0.16;
+        this.mist.material.opacity = 0.38;
+        this.mist.material.blending = THREE.AdditiveBlending;
+      } else if (worldId === 'snow') {
+        this.mist.material.color.set(0xffffff);
+        this.mist.material.size = 0.45;
+        this.mist.material.opacity = 0.72;
+        this.mist.material.blending = THREE.NormalBlending;
+      } else if (worldId === 'desert') {
+        this.mist.material.color.set(0xdf8d4f);
+        this.mist.material.size = 0.32;
+        this.mist.material.opacity = 0.48;
+        this.mist.material.blending = THREE.NormalBlending;
+      } else if (worldId === 'hilly') {
+        this.mist.material.color.set(0xedeef2);
+        this.mist.material.size = 2.2;
+        this.mist.material.opacity = 0.12;
+        this.mist.material.blending = THREE.NormalBlending;
+      } else {
+        this.mist.material.color.set(0xfff3db);
+        this.mist.material.size = 0.08;
+        this.mist.material.opacity = 0.18;
+        this.mist.material.blending = THREE.AdditiveBlending;
+      }
+      this.mist.material.needsUpdate = true;
+    }
+  }
+
   setupEvents() {
     window.addEventListener('resize', this.onResize);
     window.addEventListener('keydown', (event) => {
@@ -449,7 +965,98 @@ export class RoadRashGame {
       if (this.state === 'playing') this.pauseGame();
     });
 
-    this.dom.start.addEventListener('click', () => this.beginRace());
+    this.dom.start.addEventListener('click', () => {
+      this.dom.setupScreen.classList.add('is-visible');
+    });
+
+    this.dom.setupBack?.addEventListener('click', () => {
+      this.dom.setupScreen.classList.remove('is-visible');
+    });
+
+    this.dom.setupStart?.addEventListener('click', () => {
+      this.dom.setupScreen.classList.remove('is-visible');
+      this.beginRace();
+    });
+    
+    // Bike selection events
+    const bikeHints = {
+      sports: '// Sports Aerodynamics',
+      bullet: '// Cruiser Muscle',
+      modern: '// Cyberpunk Active Thrusters',
+      shadow: '// Heavy Composite Armor'
+    };
+    document.querySelectorAll('.bike-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.bike-btn').forEach((b) => b.classList.remove('is-active'));
+        btn.classList.add('is-active');
+        const bikeId = btn.dataset.bike;
+        this.chosenBike = bikeId;
+        localStorage.setItem('xt-chosen-bike', bikeId);
+        this.setPlayerBike(bikeId);
+        if (this.dom.bikeHint && bikeHints[bikeId]) {
+          this.dom.bikeHint.textContent = bikeHints[bikeId];
+        }
+      });
+    });
+
+    // World selection events
+    const worldHints = {
+      remote: '// Green Coastline',
+      city: '// Neon Metropolis (Rainy Night)',
+      desert: '// Sandstone Canyon (Dust Storm)',
+      snow: '// Blizzard Ridge (Glacial Pass)',
+      hilly: '// Sunset Valley (Winding Valleys)'
+    };
+    document.querySelectorAll('.world-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.world-btn').forEach((b) => b.classList.remove('is-active'));
+        btn.classList.add('is-active');
+        const worldId = btn.dataset.world;
+        this.chosenWorld = worldId;
+        localStorage.setItem('xt-chosen-world', worldId);
+        this.applyWorldTheme(worldId);
+        if (this.dom.worldHint && worldHints[worldId]) {
+          this.dom.worldHint.textContent = worldHints[worldId];
+        }
+      });
+    });
+
+    // Difficulty selection events
+    const diffHints = {
+      chill: '// Relaxed Tour',
+      speedway: '// Standard Race',
+      warrior: '// Hostile Combat',
+      death: '// Fatal Hazards'
+    };
+    document.querySelectorAll('.difficulty-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.difficulty-btn').forEach((b) => b.classList.remove('is-active'));
+        btn.classList.add('is-active');
+        const diffId = btn.dataset.difficulty;
+        this.chosenDifficulty = diffId;
+        localStorage.setItem('xt-chosen-difficulty', diffId);
+        if (this.dom.diffHint && diffHints[diffId]) {
+          this.dom.diffHint.textContent = diffHints[diffId];
+        }
+      });
+    });
+
+    // Restore selections visual state from local storage on load
+    document.querySelectorAll('.bike-btn').forEach((b) => {
+      b.classList.toggle('is-active', b.dataset.bike === this.chosenBike);
+    });
+    document.querySelectorAll('.world-btn').forEach((b) => {
+      b.classList.toggle('is-active', b.dataset.world === this.chosenWorld);
+    });
+    document.querySelectorAll('.difficulty-btn').forEach((b) => {
+      b.classList.toggle('is-active', b.dataset.difficulty === this.chosenDifficulty);
+    });
+
+    // Set initial text hints on load
+    if (this.dom.bikeHint && bikeHints[this.chosenBike]) this.dom.bikeHint.textContent = bikeHints[this.chosenBike];
+    if (this.dom.worldHint && worldHints[this.chosenWorld]) this.dom.worldHint.textContent = worldHints[this.chosenWorld];
+    if (this.dom.diffHint && diffHints[this.chosenDifficulty]) this.dom.diffHint.textContent = diffHints[this.chosenDifficulty];
+
     this.dom.how.addEventListener('click', () => {
       const visible = this.dom.controls.classList.toggle('is-visible');
       this.dom.controls.setAttribute('aria-hidden', String(!visible));
@@ -567,6 +1174,32 @@ export class RoadRashGame {
     this.checkpointTimer = 0;
     this.screeched = false;
     this.keys.clear();
+
+    // ─── Apply Selection Properties ──────────────────────────────────────────
+    const bikeConfig = BIKES[this.chosenBike] || BIKES.sports;
+    const diffConfig = DIFFICULTIES[this.chosenDifficulty] || DIFFICULTIES.speedway;
+
+    // Apply bike physical constraints
+    this.bikeMaxSpeed = bikeConfig.maxSpeed;
+    this.bikeBoostSpeed = bikeConfig.boostSpeed;
+    this.bikeHandlingMult = bikeConfig.handlingMult;
+    this.bikeDefenseMult = bikeConfig.defenseMult;
+    this.bikeNitroCapacityMult = bikeConfig.nitroCapacityMult;
+    this.bikeNitroRegenMult = bikeConfig.nitroRegenMult;
+
+    // Apply difficulty scaling
+    this.difficultyDamageMult = diffConfig.damageMult;
+    this.difficultyRegenMult = diffConfig.regenMult;
+
+    // Force rebuild/sync player model & cockpit with correct colors
+    this.setPlayerBike(this.chosenBike);
+
+    // Apply world theme visuals
+    this.applyWorldTheme(this.chosenWorld);
+
+    // Dynamically recreate traffic according to selected density
+    this.setupTraffic();
+
     this.player.position.set(0, 0.03, PLAYER_Z);
     this.player.rotation.set(0, 0, 0);
     this.player.userData.attackPivot.rotation.set(0, 0, 0);
@@ -580,10 +1213,14 @@ export class RoadRashGame {
       segment.userData.worldDistance = (index - 1) * SEGMENT_LENGTH;
       segment.visible = true;
     });
+
+    // Reset rivals with speed tuning & difficulty speed offsets
     this.rivals.forEach((rival, index) => {
       const config = RIVAL_CONFIG[index];
       rival.distance = config.distance;
-      rival.speed = 18 + index * 0.7;
+      // Faster starting zoom for a professional feel
+      rival.speed = 50 + index * 2.0;
+      rival.baseSpeed = 64 + index * 1.5 + diffConfig.rivalSpeedOffset;
       rival.lane = config.lane;
       rival.targetLane = config.lane;
       rival.health = 100;
@@ -594,14 +1231,7 @@ export class RoadRashGame {
       rival.bike.visible = true;
       rival.bike.rotation.set(0, 0, 0);
     });
-    this.traffic.forEach((traffic, index) => {
-      traffic.distance = 82 + index * 105 + (index % 4) * 18;
-      traffic.lane = LANES[(index * 3 + 1) % LANES.length];
-      traffic.targetLane = traffic.lane;
-      traffic.hit = false;
-      traffic.laneChangeTimer = 2 + Math.random() * 5;
-      traffic.car.visible = true;
-    });
+
     // Hide UI notifications
     if (this.dom.takedownBanner) this.dom.takedownBanner.classList.remove('is-visible');
     if (this.dom.nearMiss) this.dom.nearMiss.classList.remove('is-visible');
@@ -704,21 +1334,24 @@ export class RoadRashGame {
     this.boosting = boostHeld && this.nitro > 0.4 && this.speed > 48;
     if (this.boosting) {
       this.speed += 84 * dt;
-      this.nitro = Math.max(0, this.nitro - 25 * dt);
+      // Nitro capacity/consumption scaling: larger nitro capacity means slower drain
+      const nitroDrain = 25 * (1 / this.bikeNitroCapacityMult) * dt;
+      this.nitro = Math.max(0, this.nitro - nitroDrain);
       if (!this.previousBoosting) this.audio.boost();
     } else {
-      this.nitro = Math.min(100, this.nitro + 7.4 * dt);
-      if (this.speed > MAX_SPEED) this.speed -= 46 * dt;
+      const nitroRegen = 7.4 * this.bikeNitroRegenMult * dt;
+      this.nitro = Math.min(100, this.nitro + nitroRegen);
+      if (this.speed > this.bikeMaxSpeed) this.speed -= 46 * dt;
     }
     this.previousBoosting = this.boosting;
-    this.speed = clamp(this.speed, 0, BOOST_SPEED);
+    this.speed = clamp(this.speed, 0, this.bikeBoostSpeed);
     this.topSpeed = Math.max(this.topSpeed, this.speed);
 
     // Steering
     const steerInput = (right ? 1 : 0) - (left ? 1 : 0);
     const prevSteer = this.steer;
     this.steer = lerp(this.steer, steerInput, 9, dt);
-    const steeringRate = 4.5 + this.speed * 0.012;
+    const steeringRate = (4.5 + this.speed * 0.012) * this.bikeHandlingMult;
     this.playerLane += this.steer * steeringRate * dt;
     this.playerLane = clamp(this.playerLane, -8.0, 8.0);
 
@@ -743,7 +1376,8 @@ export class RoadRashGame {
     // Health regen when not taking damage
     this.noHitTimer += dt;
     if (this.noHitTimer > 5 && this.health < 100) {
-      this.health = Math.min(100, this.health + 0.5 * dt);
+      const regenRate = 0.5 * this.difficultyRegenMult * dt;
+      this.health = Math.min(100, this.health + regenRate);
     }
 
     // Nitro shimmer effect when active
@@ -828,6 +1462,7 @@ export class RoadRashGame {
   updateRivals(dt) {
     let closestRival = null;
     let closestDist = Infinity;
+    const isHardDifficulty = this.chosenDifficulty === 'warrior' || this.chosenDifficulty === 'death';
 
     this.rivals.forEach((rival, index) => {
       rival.attackCooldown = Math.max(0, rival.attackCooldown - dt);
@@ -836,27 +1471,115 @@ export class RoadRashGame {
         let desiredSpeed = rival.baseSpeed + Math.sin(this.raceTime * 0.55 + index * 1.4) * 2.5;
 
         // Smarter rubberband
-        if (relative < -100) desiredSpeed += 14; // Surge to catch up
-        if (relative < -50) desiredSpeed += 6;
-        if (relative > 200) desiredSpeed -= 10; // Back off when way ahead
+        if (relative < -120) desiredSpeed += 18; // Massive surge to catch up
+        else if (relative < -60) desiredSpeed += 8;
+        else if (relative > 180) desiredSpeed -= 12; // Moderate pacing when way ahead
 
-        rival.speed = lerp(rival.speed, desiredSpeed, 0.9, dt);
+        // Slipstream drafting bonus speed when behind player in same lane
+        const sameLane = Math.abs(rival.lane - this.playerLane) < 0.6;
+        if (relative < 0 && relative > -22 && sameLane) {
+          desiredSpeed += 6.5; // Slipstream drag reduction boost!
+          if (Math.random() < dt * 4) {
+            this.spawnBoostParticles(rival.bike.position.clone().add(new THREE.Vector3((Math.random()-0.5)*0.2, 0.5, 0.8)), 1);
+          }
+        }
+
+        // Active nitro boosts on harder difficulties
+        if (isHardDifficulty && relative < -15 && Math.random() < dt * 0.12) {
+          rival.nitroBoostTimer = 2.0; // Trigger nitrous burst!
+        }
+        if (rival.nitroBoostTimer > 0) {
+          rival.nitroBoostTimer -= dt;
+          desiredSpeed += 15;
+          if (Math.random() < dt * 15) {
+            this.spawnBoostParticles(rival.bike.position.clone().add(new THREE.Vector3((Math.random()-0.5)*0.2, 0.45, 0.9)), 2);
+          }
+        }
+
+        rival.speed = lerp(rival.speed, desiredSpeed, 1.2, dt);
         rival.distance += rival.speed * dt;
 
         rival.laneTimer -= dt;
-        if (rival.laneTimer <= 0) {
-          const laneIndex = (Math.floor(this.raceTime * 0.23 + index * 1.7) + index) % LANES.length;
-          rival.targetLane = LANES[laneIndex];
-          rival.laneTimer = 2.6 + ((index * 1.17) % 2.4);
-        }
-        rival.lane = lerp(rival.lane, rival.targetLane, 0.7, dt);
+        
+        // ── Traffic Avoidance & Lane Blocking AI ──
+        let trafficBlockingAhead = false;
+        let avoidTargetLane = rival.lane;
 
-        // Rival attacks player
+        // 1. Scan for traffic cars in rival's path
+        for (const traffic of this.traffic) {
+          const tRel = traffic.distance - rival.distance;
+          const tLat = Math.abs(traffic.lane - rival.lane);
+          if (tRel > 0 && tRel < 24 && tLat < 0.8) {
+            trafficBlockingAhead = true;
+            // Seek clear lane
+            const sideChoices = [-1.4, 0, 1.4].filter(l => Math.abs(l - traffic.lane) > 0.8);
+            if (sideChoices.length > 0) {
+              avoidTargetLane = sideChoices[Math.floor(Math.random() * sideChoices.length)];
+            }
+            break;
+          }
+        }
+
+        if (trafficBlockingAhead) {
+          rival.targetLane = avoidTargetLane;
+          rival.laneTimer = 1.2; // Quick re-evaluation
+        } else if (rival.laneTimer <= 0) {
+          // Standard lane decision or tactical behavior
+          let blockOrDraftTriggered = false;
+
+          // 2. Tactical Overtaking / Blocking / Slipstreaming
+          if (relative > 4 && relative < 18) {
+            // Player is close behind! Try to block the player's path
+            const blockChance = this.chosenDifficulty === 'chill' ? 0.05 : (this.chosenDifficulty === 'speedway' ? 0.35 : 0.75);
+            if (Math.random() < blockChance) {
+              rival.targetLane = this.playerLane;
+              blockOrDraftTriggered = true;
+            }
+          } else if (relative < -4 && relative > -18) {
+            // Player is ahead! Try to align for drafting, or slip out to pass if very close
+            const draftChance = 0.55;
+            if (Math.random() < draftChance) {
+              if (Math.abs(relative) < 6) {
+                // Pull out to overtake
+                const altLanes = LANES.filter(l => Math.abs(l - this.playerLane) > 0.8);
+                if (altLanes.length > 0) {
+                  rival.targetLane = altLanes[Math.floor(Math.random() * altLanes.length)];
+                }
+              } else {
+                // Get directly behind player for draft
+                rival.targetLane = this.playerLane;
+              }
+              blockOrDraftTriggered = true;
+            }
+          }
+
+          if (!blockOrDraftTriggered) {
+            const laneIndex = (Math.floor(this.raceTime * 0.23 + index * 1.7) + index) % LANES.length;
+            rival.targetLane = LANES[laneIndex];
+          }
+          rival.laneTimer = 2.2 + ((index * 0.95) % 1.8);
+        }
+
+        rival.lane = lerp(rival.lane, rival.targetLane, 1.5, dt);
+
+        // Rival attacks player with enhanced aggressiveness
         const longitudinal = Math.abs(relative);
         const lateral = Math.abs(rival.lane - this.playerLane);
-        if (longitudinal < 2.3 && lateral < 1.45 && rival.attackCooldown <= 0 && Math.random() < dt * 0.44) {
-          this.takeDamage(9 + index % 3, rival.lane > this.playerLane ? -1 : 1, 0.85);
-          rival.attackCooldown = 2.5;
+        if (longitudinal < 2.5 && lateral < 1.45 && rival.attackCooldown <= 0) {
+          const baseStrikeChance = isHardDifficulty ? 0.72 : 0.32;
+          if (Math.random() < dt * baseStrikeChance) {
+            // Perform weapon swing animation
+            rival.bike.rotation.z = rival.lane > this.playerLane ? -0.15 : 0.15;
+            setTimeout(() => { if (rival.bike) rival.bike.rotation.z = 0; }, 280);
+
+            const dmg = 8 + (index % 3) * 2 + (isHardDifficulty ? 5 : 0);
+            this.takeDamage(dmg, rival.lane > this.playerLane ? -1 : 1, isHardDifficulty ? 1.25 : 0.85);
+            rival.attackCooldown = isHardDifficulty ? 1.5 : 2.8;
+
+            // Spawn clash sparks
+            const strikePos = rival.bike.position.clone().add(new THREE.Vector3(rival.lane > this.playerLane ? -0.4 : 0.4, 0.6, 0));
+            this.spawnSparks(strikePos, 10);
+          }
         }
 
         // Track closest rival for HP bar
@@ -1027,7 +1750,8 @@ export class RoadRashGame {
   }
 
   takeDamage(amount, shove, strength = 1) {
-    this.health = Math.max(0, this.health - amount);
+    const finalAmount = amount * this.difficultyDamageMult * this.bikeDefenseMult;
+    this.health = Math.max(0, this.health - finalAmount);
     this.playerLane = clamp(this.playerLane + shove * 0.32 * strength, -8, 8);
     this.cameraShake = Math.max(this.cameraShake, 0.48 * strength);
     this.audio.impact(strength);
@@ -1168,13 +1892,58 @@ export class RoadRashGame {
   updateMist(dt) {
     if (!this.mist) return;
     const positions = this.mist.geometry.attributes.position.array;
-    const move = (this.speed / 3.6) * dt;
+    const forwardMove = (this.speed / 3.6) * dt;
+    
+    // Dynamic offsets based on weather type
+    let fallSpeed = 0;
+    let windX = 0;
+    let wobbleAmp = 0;
+
+    if (this.chosenWorld === 'city') {
+      fallSpeed = 22; 
+      windX = -1.5;
+    } else if (this.chosenWorld === 'snow') {
+      fallSpeed = 4.2;
+      windX = 2.0;
+      wobbleAmp = 0.5;
+    } else if (this.chosenWorld === 'desert') {
+      fallSpeed = 0.8;
+      windX = -7.5;
+      wobbleAmp = 0.2;
+    } else if (this.chosenWorld === 'hilly') {
+      fallSpeed = 0.1;
+      windX = 0.15;
+      wobbleAmp = 0.1;
+    } else {
+      fallSpeed = 0.15;
+      windX = 0.1;
+    }
+
+    const time = performance.now() * 0.001;
+
     for (let i = 0; i < positions.length; i += 3) {
-      positions[i + 2] += move;
+      positions[i + 2] += forwardMove;
+      positions[i + 1] -= fallSpeed * dt;
+      positions[i] += windX * dt;
+
+      if (wobbleAmp > 0) {
+        const idx = i / 3;
+        positions[i] += Math.sin(time * 2.5 + idx) * wobbleAmp * dt;
+      }
+
+      let needRecycle = false;
       if (positions[i + 2] > 24) {
+        needRecycle = true;
+      } else if (positions[i + 1] < -0.2) {
+        needRecycle = true;
+      } else if (Math.abs(positions[i]) > 38) {
+        needRecycle = true;
+      }
+
+      if (needRecycle) {
         positions[i + 2] = -245 - Math.random() * 25;
         positions[i] = (Math.random() - 0.5) * 76;
-        positions[i + 1] = 0.4 + Math.random() * 15;
+        positions[i + 1] = 0.4 + Math.random() * (this.chosenWorld === 'hilly' ? 6 : 18);
       }
     }
     this.mist.geometry.attributes.position.needsUpdate = true;
