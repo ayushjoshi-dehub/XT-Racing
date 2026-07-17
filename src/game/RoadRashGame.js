@@ -1006,6 +1006,7 @@ export class RoadRashGame {
       desert: '// Sandstone Canyon (Dust Storm)',
       snow: '// Blizzard Ridge (Glacial Pass)',
       hilly: '// Sunset Valley (Winding Valleys)'
+      
     };
     document.querySelectorAll('.world-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
@@ -1017,7 +1018,7 @@ export class RoadRashGame {
         this.applyWorldTheme(worldId);
         if (this.dom.worldHint && worldHints[worldId]) {
           this.dom.worldHint.textContent = worldHints[worldId];
-          
+
         }
       });
     });
