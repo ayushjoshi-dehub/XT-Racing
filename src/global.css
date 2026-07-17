@@ -1588,6 +1588,339 @@ input[type="range"].settings-slider::-moz-range-thumb {
   transition: opacity 200ms ease;
 }
 
+/* ─── Setup Screen Card Styles ───────────────────────────────────────────── */
+.setup-screen {
+  justify-content: center;
+  align-items: center;
+  background: radial-gradient(circle at center, rgba(10, 15, 25, 0.95) 0%, rgba(5, 5, 10, 0.99) 100%);
+  padding: 24px;
+}
+
+.setup-card {
+  width: 100%;
+  max-width: 960px;
+  max-height: 90vh;
+  border-radius: 20px;
+  padding: clamp(24px, 3.5vw, 40px);
+  display: flex;
+  flex-direction: column;
+  gap: clamp(20px, 3vw, 32px);
+  overflow-y: auto;
+  box-shadow: 0 24px 60px rgba(0,0,0,0.8), inset 0 0 0 1px rgba(255,255,255,0.08);
+}
+
+.setup-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 16px;
+}
+
+.setup-header h2 {
+  font-family: var(--font-display);
+  font-size: clamp(28px, 4.2vw, 46px);
+  font-weight: 900;
+  letter-spacing: -.02em;
+  margin: 4px 0 0;
+  text-transform: uppercase;
+  color: var(--text);
+  line-height: 1.0;
+}
+
+.setup-body {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.setup-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.setup-section-title {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: .15em;
+  color: var(--muted);
+  text-transform: uppercase;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-left: 3px solid var(--lime);
+  padding-left: 10px;
+}
+
+.setup-section-title .desc-hint {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--cyan);
+}
+
+.bento-options {
+  display: grid;
+  gap: 12px;
+}
+
+.bike-grid {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.environment-grid {
+  grid-template-columns: repeat(5, 1fr);
+}
+
+.difficulty-grid {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.bento-btn {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 16px;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: all 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.bento-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(255,255,255,0.03) 0%, transparent 100%);
+  pointer-events: none;
+}
+
+.bento-btn-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.bento-btn .btn-title {
+  font-family: var(--font-display);
+  font-size: clamp(15px, 2vw, 19px);
+  font-weight: 900;
+  letter-spacing: .05em;
+  color: var(--text);
+}
+
+.bento-btn .btn-stat {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .1em;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.5);
+  text-transform: uppercase;
+}
+
+.bento-btn .btn-desc {
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--muted);
+  margin: 0;
+}
+
+.bento-btn .btn-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  padding-top: 10px;
+}
+
+.bento-btn .btn-bars span {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 8px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.4);
+}
+
+.bento-btn .btn-bars .bar {
+  display: inline-block;
+  width: 70px;
+  height: 4px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 2px;
+  overflow: hidden;
+  position: relative;
+}
+
+.bento-btn .btn-bars .bar em {
+  display: block;
+  height: 100%;
+  background: currentColor;
+  border-radius: 2px;
+}
+
+.bento-btn:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+}
+
+.bento-btn.is-active {
+  background: rgba(39, 217, 255, 0.06);
+  border-color: var(--cyan);
+  box-shadow: 0 0 16px rgba(39, 217, 255, 0.15), inset 0 0 12px rgba(39, 217, 255, 0.05);
+}
+
+.bento-btn.is-active .btn-title {
+  color: var(--cyan);
+}
+
+/* Color thematic overrides for active bento cards */
+/* 1. Bikes */
+.bento-btn.is-active[data-bike="sports"] {
+  background: rgba(199, 255, 50, 0.06);
+  border-color: var(--lime);
+  box-shadow: 0 0 16px rgba(199, 255, 50, 0.15);
+}
+.bento-btn.is-active[data-bike="sports"] .btn-title,
+.bento-btn.is-active[data-bike="sports"] .btn-stat {
+  color: var(--lime);
+}
+
+.bento-btn.is-active[data-bike="bullet"] {
+  background: rgba(255, 54, 88, 0.06);
+  border-color: var(--damage);
+  box-shadow: 0 0 16px rgba(255, 54, 88, 0.15);
+}
+.bento-btn.is-active[data-bike="bullet"] .btn-title,
+.bento-btn.is-active[data-bike="bullet"] .btn-stat {
+  color: var(--damage);
+}
+
+.bento-btn.is-active[data-bike="modern"] {
+  background: rgba(255, 120, 34, 0.06);
+  border-color: var(--orange);
+  box-shadow: 0 0 16px rgba(255, 120, 34, 0.15);
+}
+.bento-btn.is-active[data-bike="modern"] .btn-title,
+.bento-btn.is-active[data-bike="modern"] .btn-stat {
+  color: var(--orange);
+}
+
+.bento-btn.is-active[data-bike="shadow"] {
+  background: rgba(180, 77, 255, 0.06);
+  border-color: #b44dff;
+  box-shadow: 0 0 16px rgba(180, 77, 255, 0.15);
+}
+.bento-btn.is-active[data-bike="shadow"] .btn-title,
+.bento-btn.is-active[data-bike="shadow"] .btn-stat {
+  color: #b44dff;
+}
+
+/* 2. Environments */
+.bento-btn.is-active[data-world="remote"] {
+  border-color: #55efc4;
+  background: rgba(85, 239, 196, 0.04);
+}
+.bento-btn.is-active[data-world="remote"] .btn-title { color: #55efc4; }
+
+.bento-btn.is-active[data-world="city"] {
+  border-color: #b44dff;
+  background: rgba(180, 77, 255, 0.04);
+}
+.bento-btn.is-active[data-world="city"] .btn-title { color: #b44dff; }
+
+.bento-btn.is-active[data-world="desert"] {
+  border-color: #ffeaa7;
+  background: rgba(255, 234, 167, 0.04);
+}
+.bento-btn.is-active[data-world="desert"] .btn-title { color: #ffeaa7; }
+
+.bento-btn.is-active[data-world="snow"] {
+  border-color: #74b9ff;
+  background: rgba(116, 185, 255, 0.04);
+}
+.bento-btn.is-active[data-world="snow"] .btn-title { color: #74b9ff; }
+
+.bento-btn.is-active[data-world="hilly"] {
+  border-color: #fd79a8;
+  background: rgba(253, 121, 168, 0.04);
+}
+.bento-btn.is-active[data-world="hilly"] .btn-title { color: #fd79a8; }
+
+/* 3. Difficulties */
+.bento-btn.is-active[data-difficulty="chill"] {
+  border-color: #00b894;
+  background: rgba(0, 184, 148, 0.04);
+}
+.bento-btn.is-active[data-difficulty="chill"] .btn-title { color: #00b894; }
+
+.bento-btn.is-active[data-difficulty="speedway"] {
+  border-color: var(--lime);
+  background: rgba(199, 255, 50, 0.04);
+}
+.bento-btn.is-active[data-difficulty="speedway"] .btn-title { color: var(--lime); }
+
+.bento-btn.is-active[data-difficulty="warrior"] {
+  border-color: var(--orange);
+  background: rgba(255, 91, 46, 0.04);
+}
+.bento-btn.is-active[data-difficulty="warrior"] .btn-title { color: var(--orange); }
+
+.bento-btn.is-active[data-difficulty="death"] {
+  border-color: var(--damage);
+  background: rgba(255, 54, 88, 0.04);
+}
+.bento-btn.is-active[data-difficulty="death"] .btn-title { color: var(--damage); }
+
+.setup-actions {
+  display: flex;
+  justify-content: flex-end;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  padding-top: 24px;
+}
+
+.launch-button {
+  min-width: 280px;
+  font-size: 16px;
+  gap: 32px;
+  box-shadow: 0 0 44px rgba(199, 255, 50, 0.35);
+}
+
+/* Animations for Setup Screens */
+@keyframes bento-entrance {
+  from { opacity: 0; transform: scale(0.97) translateY(10px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.animate-fade-in {
+  animation: bento-entrance 380ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Custom reflective wet look modifier for city, snow flurries etc. */
+.wet-reflection-overlay {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 50%, rgba(39, 217, 255, 0.06) 100%);
+  opacity: 0;
+  transition: opacity 1s ease;
+  z-index: 1;
+}
+
 /* ─── Result screen action group ─────────────────────────────────────────── */
 .result-actions {
   display: flex;
@@ -1607,4 +1940,17 @@ input[type="range"].settings-slider::-moz-range-thumb {
   .settings-card, .multi-card { padding: 24px 18px; }
   .boot-secondary-actions { display: none; }
   .result-actions { flex-direction: column; }
+  
+  .bike-options {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .world-options {
+    grid-template-columns: repeat(1, 1fr);
+  }
+  .difficulty-options {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .selection-btn .btn-sub {
+    display: none !important;
+  }
 }
