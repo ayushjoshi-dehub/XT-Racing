@@ -236,6 +236,13 @@ export class RoadRashGame {
     this.lastSteer = 0;
     this.screeched = false;
 
+    // Gyro steering state
+    this.gyroEnabled = false;
+    this.gyroBeta = 0;
+    this.gyroGamma = 0;
+    this.gyroSensitivity = 1.0;
+    this.gyroPermissionPending = false;
+
     // Sky time uniform
     this.skyMaterial = null;
     this.skyTime = 0;
@@ -317,6 +324,9 @@ export class RoadRashGame {
       rivalHpBar: byId('rival-hp-bar'),
       rivalHpFill: byId('rival-hp-fill'),
       nitroShimmer: byId('nitro-shimmer'),
+      gyroToggle: byId('gyro-toggle'),
+      gyroSensitivity: byId('gyro-sensitivity'),
+      gyroLabel: byId('gyro-label'),
     };
   }
 
@@ -1069,8 +1079,6 @@ export class RoadRashGame {
     this.dom.restartPause.addEventListener('click', () => this.beginRace());
     this.dom.restart.addEventListener('click', () => this.beginRace());
     this.dom.menuBtn?.addEventListener('click', () => this.returnToMenu());
-    this.dom.settingsBtn?.addEventListener('click', () => this.openSettings());
-    this.dom.settingsClose?.addEventListener('click', () => this.closeSettings());
     this.dom.multiBtn?.addEventListener('click', () => this.openMultiplayer());
     this.dom.multiClose?.addEventListener('click', () => this.closeMultiplayer());
     // Multiplayer tab switching
@@ -1080,6 +1088,51 @@ export class RoadRashGame {
         btn.classList.add('is-active');
       });
     });
+
+    // Gyro steering setup
+    this.gyroEnabled = localStorage.getItem('xt-gyro-enabled') === 'true';
+    this.gyroSensitivity = parseFloat(localStorage.getItem('xt-gyro-sensitivity') || '1.0');
+
+    if (this.dom.gyroToggle) {
+      this.dom.gyroToggle.checked = this.gyroEnabled;
+      this.dom.gyroToggle.addEventListener('change', async (e) => {
+        this.gyroEnabled = e.target.checked;
+        localStorage.setItem('xt-gyro-enabled', this.gyroEnabled);
+        if (this.gyroEnabled) {
+          await this.requestGyroPermission();
+          if (this.dom.gyroLabel) this.dom.gyroLabel.textContent = 'GYRO ON';
+        } else if (this.dom.gyroLabel) {
+          this.dom.gyroLabel.textContent = 'GYRO OFF';
+        }
+      });
+    }
+    if (this.dom.gyroSensitivity) {
+      this.dom.gyroSensitivity.value = this.gyroSensitivity;
+      this.dom.gyroSensitivity.addEventListener('input', (e) => {
+        this.gyroSensitivity = parseFloat(e.target.value);
+        localStorage.setItem('xt-gyro-sensitivity', this.gyroSensitivity);
+      });
+    }
+    if (this.dom.gyroLabel) {
+      this.dom.gyroLabel.textContent = this.gyroEnabled ? 'GYRO ON' : 'GYRO OFF';
+    }
+
+    window.addEventListener('deviceorientation', (event) => {
+      if (!this.gyroEnabled) return;
+      if (event.gamma === null || event.beta === null) return;
+      this.gyroGamma = event.gamma || 0;
+      this.gyroBeta = event.beta || 0;
+    });
+
+    this.dom.settingsClose?.addEventListener('click', () => {
+      this.closeSettings();
+      this.requestGyroPermission();
+    });
+    this.dom.settingsBtn?.addEventListener('click', () => {
+      this.openSettings();
+      this.requestGyroPermission();
+    });
+
     // Settings: audio sliders
     document.querySelectorAll('.settings-slider').forEach((slider) => {
       slider.addEventListener('input', (e) => {
@@ -1118,6 +1171,22 @@ export class RoadRashGame {
       button.addEventListener('pointercancel', up);
       button.addEventListener('pointerleave', up);
     });
+  }
+
+  async requestGyroPermission() {
+    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+      if (this.gyroPermissionPending) return;
+      this.gyroPermissionPending = true;
+      try {
+        const permission = await DeviceOrientationEvent.requestPermission();
+        if (permission === 'granted') {
+          console.log('Gyro permission granted');
+        }
+      } catch (err) {
+        console.warn('Gyro permission request failed:', err);
+      }
+      this.gyroPermissionPending = false;
+    }
   }
 
   async beginRace() {
@@ -1326,6 +1395,12 @@ export class RoadRashGame {
     const right = this.keys.has('KeyD') || this.keys.has('ArrowRight');
     const boostHeld = this.keys.has('ShiftLeft') || this.keys.has('ShiftRight');
 
+    let steerInput = (right ? 1 : 0) - (left ? 1 : 0);
+    if (this.gyroEnabled) {
+      const gyroSteer = clamp(this.gyroGamma / 25, -1, 1) * this.gyroSensitivity;
+      steerInput = steerInput === 0 ? gyroSteer : steerInput;
+    }
+
     if (throttle) this.speed += (68 - this.speed * 0.055) * dt;
     else this.speed -= (11 + this.speed * 0.018) * dt;
     if (braking) this.speed -= 94 * dt;
@@ -1350,7 +1425,6 @@ export class RoadRashGame {
     this.topSpeed = Math.max(this.topSpeed, this.speed);
 
     // Steering
-    const steerInput = (right ? 1 : 0) - (left ? 1 : 0);
     const prevSteer = this.steer;
     this.steer = lerp(this.steer, steerInput, 9, dt);
     const steeringRate = (4.5 + this.speed * 0.012) * this.bikeHandlingMult;

@@ -943,23 +943,60 @@ kbd {
   .controls-panel.is-visible { max-height: 160px; }
   .boot-meta { justify-content: space-between; gap: 0; font-size: 9px; }
   .boot-meta span + span::before { display: none; }
-  .hud-position { left: 12px; top: 12px; width: 88px; padding: 9px 11px; }
-  .hud-position strong { font-size: 36px; }
-  .hud-progress { top: 14px; width: 38vw; }
+
+  .hud-position { left: 10px; top: 10px; width: 68px; padding: 8px 10px; }
+  .hud-position strong { font-size: 28px; }
+  .hud-position div span { font-size: 14px; }
+
+  .hud-progress { top: 10px; width: 42vw; left: 50%; transform: translateX(-50%); }
   .progress-copy span { display: none; }
-  .progress-copy { justify-content: center; }
-  .hud-race { right: 52px; top: 12px; min-width: 0; padding: 10px 12px; }
+  .progress-copy { justify-content: center; font-size: 7px; }
+  .progress-copy strong { font-size: 8px; }
+  .progress-track { height: 2px; }
+
+  .hud-race { right: 8px; top: 10px; min-width: 0; padding: 8px 10px; gap: 10px; }
   .hud-race > div:first-child { display: none; }
   .hud-race > div + div { padding-left: 0; border-left: 0; }
-  .pause-button { top: 15px; right: 11px; }
-  .hud-vitals { left: 12px; bottom: 94px; width: 152px; padding: 10px; }
-  .speedometer { bottom: 99px; }
-  .speed-readout strong { min-width: 76px; font-size: 56px; }
-  .rev-bars { width: 146px; }
+  .hud-race strong { font-size: 13px; }
+  .hud-race span { font-size: 7px; }
+
+  .pause-button { top: 12px; right: 8px; width: 30px; height: 30px; }
+  .pause-button i { height: 9px; }
+
+  .hud-vitals { left: 10px; bottom: 86px; width: 130px; padding: 8px 10px; }
+  .vital-heading { font-size: 7px; }
+  .vital-heading strong { font-size: 10px; }
+  .meter { height: 3px; margin-top: 4px; }
+  .nitro-heading { margin-top: 8px; }
+
+  .speedometer { bottom: 90px; }
+  .speed-readout strong { min-width: 60px; font-size: 46px; }
+  .speed-readout span { font-size: 9px; margin-bottom: 5px; }
+  .rev-bars { width: 120px; height: 5px; }
+  .gear-readout { height: 38px; padding-left: 10px; }
+  .gear-readout strong { font-size: 24px; }
+  .gear-readout span { font-size: 7px; }
+
   .combat-prompt { display: none; }
-  .result-screen { padding: 24px; align-items: center; }
+
+  .rival-hp-bar { right: 8px; top: auto; bottom: 86px; width: 110px; padding: 8px 10px; transform: none; }
+  .rival-hp-track { height: 4px; }
+  .rival-hp-bar span { font-size: 7px; }
+
+  .touch-controls { bottom: max(10px, env(safe-area-inset-bottom)); right: 8px; left: 8px; }
+  .touch-controls button { width: 52px; height: 52px; font-size: 13px; }
+  .touch-steer, .touch-actions { gap: 7px; }
+
+  .result-screen { padding: 20px; align-items: center; }
   .result-card { width: 100%; }
-  .result-card h2 { font-size: 25vw; }
+  .result-card h2 { font-size: 22vw; }
+  .result-stats strong { font-size: 22px; }
+  .result-stats span { font-size: 8px; }
+  .result-stats > div { min-height: 60px; padding: 10px 12px; }
+
+  .takedown-banner { font-size: clamp(24px, 6vw, 42px); top: 32%; }
+  .near-miss { font-size: clamp(14px, 3.5vw, 24px); top: 40%; }
+  .checkpoint-notify { top: 22%; font-size: 11px; padding: 7px 16px; }
 }
 
 @media (max-height: 620px) and (orientation: landscape) {
@@ -1210,6 +1247,42 @@ input[type="range"].settings-slider::-moz-range-thumb {
   background: var(--lime);
   box-shadow: 0 0 10px rgba(199,255,50,.6);
   cursor: pointer;
+}
+
+.gyro-toggle {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 44px;
+  height: 24px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.15);
+  border: 1px solid rgba(255,255,255,.18);
+  cursor: pointer;
+  position: relative;
+  transition: background 180ms ease, border-color 180ms ease;
+}
+
+.gyro-toggle:checked {
+  background: rgba(39,217,255,.25);
+  border-color: var(--cyan);
+}
+
+.gyro-toggle::before {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.7);
+  transition: transform 180ms ease, background 180ms ease;
+}
+
+.gyro-toggle:checked::before {
+  transform: translateX(20px);
+  background: var(--cyan);
+  box-shadow: 0 0 10px rgba(39,217,255,.6);
 }
 
 .quality-grid {

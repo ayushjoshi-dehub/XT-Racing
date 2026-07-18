@@ -358,6 +358,22 @@
                 <div><kbd>ENTER</kbd> <span>Start Race</span></div>
               </div>
             </div>
+
+            <!-- Gyroscope -->
+            <div class="settings-section">
+              <h3 class="settings-section-title">GYROSCOPE <span id="gyro-label" class="desc-hint"></span></h3>
+              <div class="slider-row">
+                <label for="gyro-toggle">ENABLE</label>
+                <input id="gyro-toggle" type="checkbox" class="gyro-toggle" />
+                <span class="slider-val" style="visibility:hidden">—</span>
+              </div>
+              <div class="slider-row">
+                <label for="gyro-sensitivity">SENSITIVITY</label>
+                <input id="gyro-sensitivity" type="range" min="0.2" max="2.5" step="0.1" value="1.0" class="settings-slider" data-setting="gyro-sensitivity" />
+                <span class="slider-val gyro-val">100</span>
+              </div>
+              <p class="pause-hint" style="margin-top:6px;font-size:8px;color:var(--muted)">TILT DEVICE LEFT/RIGHT TO STEER</p>
+            </div>
           </div>
         </div>
       </section>
@@ -463,6 +479,13 @@
           s.addEventListener('input', () => { display.textContent = Math.round(s.value * 100); });
         }
       });
+      // Live gyro sensitivity display
+      const gyroSens = document.getElementById('gyro-sensitivity');
+      const gyroVal = gyroSens?.parentElement.querySelector('.gyro-val');
+      if (gyroSens && gyroVal) {
+        gyroVal.textContent = Math.round(gyroSens.value * 100);
+        gyroSens.addEventListener('input', () => { gyroVal.textContent = Math.round(gyroSens.value * 100); });
+      }
     </script>
   </body>
 </html>
